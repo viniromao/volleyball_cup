@@ -35,22 +35,20 @@ func RenderAjuda() string {
 		"`!dupla João & Maria` — cadastra uma dupla",
 		"`!duplas` — lista as duplas inscritas",
 		"`!remover João` — tira a dupla do João",
-		"`!formato sets` ou `!formato pontos`",
 		"",
 		"*Gerar a tabela*",
-		"`!sortear` — todos contra todos, turno único",
-		"`!sortear 2` — turno e returno",
+		"`!sortear` — todos contra todos, ida e volta",
 		"",
 		"*Durante a copa*",
 		"`!jogos` — o que falta jogar",
-		"`!placar 7 2x1` — placar do jogo J7 (sempre pelo ID)",
-		"`!placar 7 2x0` — manda de novo pra corrigir o J7",
+		"`!placar 7 21x18` — placar do jogo J7 (sempre pelo ID)",
+		"`!placar 7 21x15` — manda de novo pra corrigir o J7",
 		"`!tabela` — a classificação",
 		"`!campeonato` — tabela + todas as rodadas",
 		"`!desfazer` — apaga o último resultado",
 		"",
 		"*Foto*",
-		"manda a foto/sticker da dupla comemorando logo depois do placar (ou com `!placar 7 2x1` na legenda) que eu grudo no jogo.",
+		"manda a foto/sticker da dupla comemorando logo depois do placar (ou com `!placar 7 21x18` na legenda) que eu grudo no jogo.",
 		"",
 		"`!zerar CONFIRMA` — recomeça tudo do zero",
 	}, "\n")
@@ -67,7 +65,7 @@ func (t *Torneio) RenderDuplas() string {
 	}
 	if !t.Sorteado {
 		n := len(t.Duplas)
-		fmt.Fprintf(&b, "\nDá %d jogos no turno único. Manda `!sortear` quando fechar a lista.", n*(n-1)/2)
+		fmt.Fprintf(&b, "\nDá %d jogos (cada dupla enfrenta as outras 2 vezes). Manda `!sortear` quando fechar a lista.", n*(n-1))
 	}
 	return b.String()
 }
@@ -76,15 +74,11 @@ func (t *Torneio) RenderTabela() string {
 	if !t.Sorteado {
 		return "Ainda não gerei a tabela. Manda `!sortear`."
 	}
-	unidade := "SD"
-	if t.Formato == "pontos" {
-		unidade = "SP"
-	}
 	var b strings.Builder
 	b.WriteString("📊 *CLASSIFICAÇÃO*\n```\n")
-	fmt.Fprintf(&b, "%-2s %-15s %2s %2s %2s %4s %3s\n", "#", "DUPLA", "J", "V", "D", unidade, "P")
+	fmt.Fprintf(&b, "%-2s %-15s %2s %2s %2s %5s %3s\n", "#", "DUPLA", "J", "V", "D", "SALDO", "P")
 	for i, l := range t.Classificacao() {
-		fmt.Fprintf(&b, "%-2d %-15s %2d %2d %2d %+4d %3d\n",
+		fmt.Fprintf(&b, "%-2d %-15s %2d %2d %2d %+5d %3d\n",
 			i+1, corta(t.NomeDupla(l.Dupla), 15), l.Jogos, l.Vitoria, l.Derrota, l.Saldo(), l.Pontos)
 	}
 	b.WriteString("```")
@@ -153,7 +147,7 @@ func (t *Torneio) RenderJogos() string {
 			fmt.Fprintf(&b, "%s%s\n", prefixo, t.LinhaJogo(j))
 		}
 	}
-	b.WriteString("\nPra registrar: `!placar <id> 2x1` — ex: `!placar " + fmt.Sprint(primeiro) + " 2x1`")
+	b.WriteString("\nPra registrar: `!placar <id> 21x18` — ex: `!placar " + fmt.Sprint(primeiro) + " 21x18`")
 	return b.String()
 }
 

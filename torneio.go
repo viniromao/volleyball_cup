@@ -58,7 +58,6 @@ func (j *Jogo) Envolve(id int) bool {
 
 type Torneio struct {
 	Chat           string    `json:"chat"`
-	Formato        string    `json:"formato"`
 	Turnos         int       `json:"turnos"`
 	Duplas         []*Dupla  `json:"duplas"`
 	Jogos          []*Jogo   `json:"jogos"`
@@ -72,7 +71,7 @@ type Torneio struct {
 }
 
 func NovoTorneio(chat string) *Torneio {
-	return &Torneio{Chat: chat, Formato: "sets", Turnos: 1, ProxID: 1}
+	return &Torneio{Chat: chat, Turnos: 1, ProxID: 1}
 }
 
 func (t *Torneio) novoID() int {
@@ -166,15 +165,9 @@ func gerarRodadas(ids []int) [][][2]int {
 	return rodadas
 }
 
-func (t *Torneio) Sortear(turnos int) error {
+func (t *Torneio) Sortear() error {
 	if len(t.Duplas) < 2 {
 		return errors.New("preciso de pelo menos 2 duplas")
-	}
-	if turnos <= 0 {
-		turnos = 1
-	}
-	if turnos > 4 {
-		turnos = 4
 	}
 
 	t.Jogos = nil
@@ -250,15 +243,10 @@ func (t *Torneio) Encerrado() bool {
 	return t.Sorteado && len(t.Jogos) > 0 && len(t.JogosPendentes()) == 0
 }
 
-func (t *Torneio) pontos(vencedor, perdedor int) (int, int) {
-	if t.Formato == "pontos" {
-		return 3, 0
-	}
-	if perdedor >= 1 {
-		return 2, 1
-	}
-	return 3, 0
-}
+const (
+	pontosPorVitoria = 3
+	turnos           = 2
+)
 
 type Linha struct {
 	Dupla    int
@@ -300,15 +288,11 @@ func (t *Torneio) Classificacao() []Linha {
 		lb.Pro += j.PlacarB
 		lb.Contra += j.PlacarA
 		if j.PlacarA > j.PlacarB {
-			p, q := t.pontos(j.PlacarA, j.PlacarB)
-			la.Pontos += p
-			lb.Pontos += q
+			la.Pontos += pontosPorVitoria
 			la.Vitoria++
 			lb.Derrota++
 		} else {
-			p, q := t.pontos(j.PlacarB, j.PlacarA)
-			lb.Pontos += p
-			la.Pontos += q
+			lb.Pontos += pontosPorVitoria
 			lb.Vitoria++
 			la.Derrota++
 		}
@@ -316,7 +300,7 @@ func (t *Torneio) Classificacao() []Linha {
 
 	melhorAtual := 0
 	for _, l := range linhas {
-		l.Maximo = l.Pontos + 3*l.Restam
+		l.Maximo = l.Pontos + pontosPorVitoria*l.Restam
 		if l.Pontos > melhorAtual {
 			melhorAtual = l.Pontos
 		}
@@ -396,13 +380,11 @@ func (t *Torneio) RegistrarPlacar(jogoID, a, b int) (*Jogo, bool, error) {
 	if j == nil {
 		return nil, false, fmt.Errorf("não existe o jogo J%d", jogoID)
 	}
-	if a == b {
-		return nil, false, errors.New("no vôlei não tem empate")
+	if a < 0 || b < 0 {
+		return nil, false, errors.New("placar não tem número negativo")
 	}
-	if t.Formato == "sets" {
-		if a > 2 || b > 2 || (a != 2 && b != 2) {
-			return nil, false, errors.New("no formato sets o placar é 2x0, 2x1, 1x2 ou 0x2 (troque com !formato pontos)")
-		}
+	if a == b {
+		return nil, false, errors.New("empate não decide jogo, confere o placar")
 	}
 	corrigido := j.Jogado
 	j.PlacarA = a

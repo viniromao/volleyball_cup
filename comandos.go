@@ -70,40 +70,17 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		}
 		return fmt.Sprintf("🗑️ Removi a dupla *%s*.", d.Nome()), true
 
-	case "formato":
-		f := strings.ToLower(strings.TrimSpace(resto))
-		if f != "sets" && f != "pontos" {
-			return "Use `!formato sets` (melhor de 3) ou `!formato pontos` (set único, ex: 21x18).\nAtual: *" + t.Formato + "*", false
-		}
-		t.Formato = f
-		if f == "sets" {
-			return "📐 Formato: *melhor de 3 sets*. Placares válidos: 2x0, 2x1, 1x2, 0x2.", true
-		}
-		return "📐 Formato: *set único*. Manda o placar em pontos, ex: `!placar 21x18`.", true
-
 	case "sortear", "sorteio", "gerar", "comecar", "começar":
-		turnos := 0
-		if resto != "" {
-			if v, err := strconv.Atoi(strings.Fields(resto)[0]); err == nil {
-				turnos = v
-			}
-		}
 		if t.Sorteado {
 			return "A tabela já está gerada. Se quiser refazer tudo: `!zerar CONFIRMA`.", false
 		}
-		if err := t.Sortear(turnos); err != nil {
+		if err := t.Sortear(); err != nil {
 			return "⚠️ " + err.Error(), false
 		}
 		var b2 strings.Builder
 		b2.WriteString("🎲 *TABELA GERADA!*\n\n")
-		nome := "turno único"
-		if t.Turnos == 2 {
-			nome = "turno e returno"
-		} else if t.Turnos > 2 {
-			nome = fmt.Sprintf("%d turnos", t.Turnos)
-		}
-		fmt.Fprintf(&b2, "Pontos corridos, %s: %d duplas, %d jogos em %d rodadas.\n", nome, len(t.Duplas), len(t.Jogos), t.Rodadas())
-		fmt.Fprintf(&b2, "Cada dupla joga contra todas as outras. Campeã é quem somar mais pontos no fim.\n\n%s", t.RenderJogos())
+		fmt.Fprintf(&b2, "Pontos corridos, turno e returno: %d duplas, %d jogos em %d rodadas.\n", len(t.Duplas), len(t.Jogos), t.Rodadas())
+		fmt.Fprintf(&b2, "Cada dupla enfrenta cada uma das outras *2 vezes*. Vitória vale %d pontos; campeã é quem somar mais no fim.\n\n%s", pontosPorVitoria, t.RenderJogos())
 		return b2.String(), true
 
 	case "campeonato", "chaves", "chave", "copa", "rodadas":
@@ -121,7 +98,7 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		}
 		m := rePlacar.FindStringSubmatch(strings.TrimSpace(resto))
 		if m == nil || m[1] == "" {
-			return "Manda o *ID do jogo* junto: `!placar 7 2x1` (jogo J7).\n\n" + t.RenderJogos(), false
+			return "Manda o *ID do jogo* junto: `!placar 7 21x18` (jogo J7).\n\n" + t.RenderJogos(), false
 		}
 		id, _ := strconv.Atoi(m[1])
 		a, _ := strconv.Atoi(m[2])
@@ -155,7 +132,7 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 			return "⚠️ " + err.Error(), false
 		}
 		t.Atualizar()
-		return fmt.Sprintf("↩️ Desfiz o resultado do J%d. Manda de novo: `!placar %d 2x1`", j.ID, j.ID), true
+		return fmt.Sprintf("↩️ Desfiz o resultado do J%d. Manda de novo: `!placar %d 21x18`", j.ID, j.ID), true
 
 	case "zerar", "reset":
 		if strings.ToUpper(strings.TrimSpace(resto)) != "CONFIRMA" {
