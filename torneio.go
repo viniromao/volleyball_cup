@@ -10,10 +10,9 @@ import (
 )
 
 type Dupla struct {
-	ID    int    `json:"id"`
-	A     string `json:"a"`
-	B     string `json:"b"`
-	Grupo int    `json:"grupo"`
+	ID int    `json:"id"`
+	A  string `json:"a"`
+	B  string `json:"b"`
 }
 
 func (d *Dupla) Nome() string {
@@ -22,23 +21,15 @@ func (d *Dupla) Nome() string {
 
 type Jogo struct {
 	ID      int       `json:"id"`
-	Fase    string    `json:"fase"`
-	Grupo   int       `json:"grupo"`
 	Rodada  int       `json:"rodada"`
-	Slot    int       `json:"slot"`
+	Turno   int       `json:"turno"`
 	A       int       `json:"a"`
 	B       int       `json:"b"`
-	DeA     int       `json:"de_a"`
-	DeB     int       `json:"de_b"`
 	PlacarA int       `json:"placar_a"`
 	PlacarB int       `json:"placar_b"`
 	Jogado  bool      `json:"jogado"`
 	Foto    string    `json:"foto"`
 	Quando  time.Time `json:"quando"`
-}
-
-func (j *Jogo) Pronto() bool {
-	return j.A != 0 && j.B != 0
 }
 
 func (j *Jogo) Vencedor() int {
@@ -61,14 +52,17 @@ func (j *Jogo) Perdedor() int {
 	return j.A
 }
 
+func (j *Jogo) Envolve(id int) bool {
+	return j.A == id || j.B == id
+}
+
 type Torneio struct {
 	Chat           string    `json:"chat"`
 	Formato        string    `json:"formato"`
+	Turnos         int       `json:"turnos"`
 	Duplas         []*Dupla  `json:"duplas"`
 	Jogos          []*Jogo   `json:"jogos"`
-	Grupos         [][]int   `json:"grupos"`
 	Sorteado       bool      `json:"sorteado"`
-	MataMata       bool      `json:"mata_mata"`
 	Campea         int       `json:"campea"`
 	ProxID         int       `json:"prox_id"`
 	Historico      []int     `json:"historico"`
@@ -78,7 +72,7 @@ type Torneio struct {
 }
 
 func NovoTorneio(chat string) *Torneio {
-	return &Torneio{Chat: chat, Formato: "sets", ProxID: 1}
+	return &Torneio{Chat: chat, Formato: "sets", Turnos: 1, ProxID: 1}
 }
 
 func (t *Torneio) novoID() int {
@@ -114,7 +108,7 @@ func (t *Torneio) Jogo(id int) *Jogo {
 
 func (t *Torneio) AddDupla(a, b string) (*Dupla, error) {
 	if t.Sorteado {
-		return nil, errors.New("o sorteio já foi feito, use !zerar CONFIRMA pra recomeçar")
+		return nil, errors.New("a tabela já foi gerada, use !zerar CONFIRMA pra recomeçar")
 	}
 	a = strings.TrimSpace(a)
 	b = strings.TrimSpace(b)
@@ -126,19 +120,18 @@ func (t *Torneio) AddDupla(a, b string) (*Dupla, error) {
 			return nil, fmt.Errorf("%s já está na dupla %s", a, d.Nome())
 		}
 	}
-	d := &Dupla{ID: t.novoID(), A: a, B: b, Grupo: -1}
+	d := &Dupla{ID: t.novoID(), A: a, B: b}
 	t.Duplas = append(t.Duplas, d)
 	return d, nil
 }
 
 func (t *Torneio) RemoveDupla(alvo string) (*Dupla, error) {
 	if t.Sorteado {
-		return nil, errors.New("o sorteio já foi feito, use !zerar CONFIRMA pra recomeçar")
+		return nil, errors.New("a tabela já foi gerada, use !zerar CONFIRMA pra recomeçar")
 	}
 	alvo = strings.ToLower(strings.TrimSpace(alvo))
 	for i, d := range t.Duplas {
-		nome := strings.ToLower(d.Nome())
-		if strings.Contains(nome, alvo) {
+		if strings.Contains(strings.ToLower(d.Nome()), alvo) {
 			t.Duplas = append(t.Duplas[:i], t.Duplas[i+1:]...)
 			return d, nil
 		}
@@ -146,59 +139,76 @@ func (t *Torneio) RemoveDupla(alvo string) (*Dupla, error) {
 	return nil, errors.New("não achei essa dupla")
 }
 
-func quantosGrupos(n int) int {
-	if n < 4 {
-		return 1
+func gerarRodadas(ids []int) [][][2]int {
+	lista := append([]int{}, ids...)
+	if len(lista)%2 == 1 {
+		lista = append(lista, 0)
 	}
-	return (n + 3) / 4
+	n := len(lista)
+	var rodadas [][][2]int
+	for r := 0; r < n-1; r++ {
+		var jogos [][2]int
+		for i := 0; i < n/2; i++ {
+			a, b := lista[i], lista[n-1-i]
+			if a == 0 || b == 0 {
+				continue
+			}
+			if r%2 == 1 {
+				a, b = b, a
+			}
+			jogos = append(jogos, [2]int{a, b})
+		}
+		rodadas = append(rodadas, jogos)
+		resto := append([]int{}, lista[1:]...)
+		resto = append([]int{resto[len(resto)-1]}, resto[:len(resto)-1]...)
+		lista = append([]int{lista[0]}, resto...)
+	}
+	return rodadas
 }
 
-func (t *Torneio) Sortear(grupos int) error {
+func (t *Torneio) Sortear(turnos int) error {
 	if len(t.Duplas) < 2 {
 		return errors.New("preciso de pelo menos 2 duplas")
 	}
-	if grupos <= 0 {
-		grupos = quantosGrupos(len(t.Duplas))
+	if turnos <= 0 {
+		turnos = 1
 	}
-	if grupos > len(t.Duplas)/2 {
-		grupos = len(t.Duplas) / 2
-	}
-	if grupos < 1 {
-		grupos = 1
+	if turnos > 4 {
+		turnos = 4
 	}
 
 	t.Jogos = nil
 	t.Historico = nil
-	t.MataMata = false
 	t.Campea = 0
+	t.AnunciouCampea = false
+	t.Turnos = turnos
 	t.ProxID = 1
 	for _, d := range t.Duplas {
 		d.ID = t.novoID()
 	}
 
-	ordem := make([]*Dupla, len(t.Duplas))
-	copy(ordem, t.Duplas)
+	ordem := make([]int, 0, len(t.Duplas))
+	for _, d := range t.Duplas {
+		ordem = append(ordem, d.ID)
+	}
 	rand.Shuffle(len(ordem), func(i, j int) { ordem[i], ordem[j] = ordem[j], ordem[i] })
 
-	t.Grupos = make([][]int, grupos)
-	for i, d := range ordem {
-		g := i % grupos
-		if (i/grupos)%2 == 1 {
-			g = grupos - 1 - g
-		}
-		d.Grupo = g
-		t.Grupos[g] = append(t.Grupos[g], d.ID)
-	}
-
-	for g, ids := range t.Grupos {
-		for i := 0; i < len(ids); i++ {
-			for k := i + 1; k < len(ids); k++ {
+	base := gerarRodadas(ordem)
+	rodada := 0
+	for turno := 1; turno <= turnos; turno++ {
+		for _, jogos := range base {
+			rodada++
+			for _, par := range jogos {
+				a, b := par[0], par[1]
+				if turno%2 == 0 {
+					a, b = b, a
+				}
 				t.Jogos = append(t.Jogos, &Jogo{
-					ID:    t.novoID(),
-					Fase:  "grupo",
-					Grupo: g,
-					A:     ids[i],
-					B:     ids[k],
+					ID:     t.novoID(),
+					Rodada: rodada,
+					Turno:  turno,
+					A:      a,
+					B:      b,
 				})
 			}
 		}
@@ -207,78 +217,84 @@ func (t *Torneio) Sortear(grupos int) error {
 	return nil
 }
 
-func (t *Torneio) JogosDaFaseDeGrupos() []*Jogo {
+func (t *Torneio) Rodadas() int {
+	max := 0
+	for _, j := range t.Jogos {
+		if j.Rodada > max {
+			max = j.Rodada
+		}
+	}
+	return max
+}
+
+func (t *Torneio) JogosPendentes() []*Jogo {
 	var out []*Jogo
 	for _, j := range t.Jogos {
-		if j.Fase == "grupo" {
+		if !j.Jogado {
 			out = append(out, j)
 		}
 	}
 	return out
 }
 
-func (t *Torneio) GruposEncerrados() bool {
-	jogos := t.JogosDaFaseDeGrupos()
-	if len(jogos) == 0 {
-		return false
-	}
-	for _, j := range jogos {
-		if !j.Jogado {
-			return false
-		}
-	}
-	return true
-}
-
 func (t *Torneio) ProximoJogo() *Jogo {
 	for _, j := range t.Jogos {
-		if !j.Jogado && j.Pronto() {
+		if !j.Jogado {
 			return j
 		}
 	}
 	return nil
 }
 
-func (t *Torneio) pontos(vencedorSets, perdedorSets int) (int, int) {
+func (t *Torneio) Encerrado() bool {
+	return t.Sorteado && len(t.Jogos) > 0 && len(t.JogosPendentes()) == 0
+}
+
+func (t *Torneio) pontos(vencedor, perdedor int) (int, int) {
 	if t.Formato == "pontos" {
 		return 3, 0
 	}
-	if perdedorSets >= 1 {
+	if perdedor >= 1 {
 		return 2, 1
 	}
 	return 3, 0
 }
 
 type Linha struct {
-	Dupla   int
-	Pontos  int
-	Vitoria int
-	Derrota int
-	Pro     int
-	Contra  int
+	Dupla    int
+	Jogos    int
+	Pontos   int
+	Vitoria  int
+	Derrota  int
+	Pro      int
+	Contra   int
+	Restam   int
+	Maximo   int
+	SemChanc bool
 }
 
 func (l Linha) Saldo() int { return l.Pro - l.Contra }
 
-func (t *Torneio) Classificacao(grupo int) []Linha {
-	if grupo < 0 || grupo >= len(t.Grupos) {
-		return nil
-	}
+func (t *Torneio) Classificacao() []Linha {
 	idx := map[int]*Linha{}
 	var linhas []*Linha
-	for _, id := range t.Grupos[grupo] {
-		l := &Linha{Dupla: id}
-		idx[id] = l
+	for _, d := range t.Duplas {
+		l := &Linha{Dupla: d.ID}
+		idx[d.ID] = l
 		linhas = append(linhas, l)
 	}
 	for _, j := range t.Jogos {
-		if j.Fase != "grupo" || j.Grupo != grupo || !j.Jogado {
-			continue
-		}
 		la, lb := idx[j.A], idx[j.B]
 		if la == nil || lb == nil {
 			continue
 		}
+		if !j.Jogado {
+			la.Restam++
+			lb.Restam++
+			continue
+		}
+		la.Jogos++
+		lb.Jogos++
 		la.Pro += j.PlacarA
 		la.Contra += j.PlacarB
 		lb.Pro += j.PlacarB
@@ -297,10 +313,25 @@ func (t *Torneio) Classificacao(grupo int) []Linha {
 			la.Derrota++
 		}
 	}
+
+	melhorAtual := 0
+	for _, l := range linhas {
+		l.Maximo = l.Pontos + 3*l.Restam
+		if l.Pontos > melhorAtual {
+			melhorAtual = l.Pontos
+		}
+	}
+	for _, l := range linhas {
+		l.SemChanc = l.Maximo < melhorAtual
+	}
+
 	sort.SliceStable(linhas, func(i, k int) bool {
 		a, b := linhas[i], linhas[k]
 		if a.Pontos != b.Pontos {
 			return a.Pontos > b.Pontos
+		}
+		if a.Vitoria != b.Vitoria {
+			return a.Vitoria > b.Vitoria
 		}
 		if a.Saldo() != b.Saldo() {
 			return a.Saldo() > b.Saldo()
@@ -313,6 +344,7 @@ func (t *Torneio) Classificacao(grupo int) []Linha {
 		}
 		return a.Dupla < b.Dupla
 	})
+
 	out := make([]Linha, len(linhas))
 	for i, l := range linhas {
 		out[i] = *l
@@ -321,195 +353,69 @@ func (t *Torneio) Classificacao(grupo int) []Linha {
 }
 
 func (t *Torneio) confrontoDireto(a, b int) int {
+	saldoA := 0
 	for _, j := range t.Jogos {
 		if !j.Jogado {
 			continue
 		}
-		if (j.A == a && j.B == b) || (j.A == b && j.B == a) {
-			return j.Vencedor()
+		if j.A == a && j.B == b {
+			saldoA += j.PlacarA - j.PlacarB
+		} else if j.A == b && j.B == a {
+			saldoA += j.PlacarB - j.PlacarA
 		}
+	}
+	if saldoA > 0 {
+		return a
+	}
+	if saldoA < 0 {
+		return b
 	}
 	return 0
 }
 
-func (t *Torneio) classificados() []int {
-	if len(t.Grupos) == 1 {
-		cl := t.Classificacao(0)
-		n := 4
-		if len(cl) < 4 {
-			n = 2
-		}
-		if len(cl) < n {
-			n = len(cl)
-		}
-		out := make([]int, 0, n)
-		for i := 0; i < n; i++ {
-			out = append(out, cl[i].Dupla)
-		}
-		return out
+func (t *Torneio) Lider() int {
+	cl := t.Classificacao()
+	if len(cl) == 0 {
+		return 0
 	}
-	var primeiros, segundos []int
-	for g := range t.Grupos {
-		cl := t.Classificacao(g)
-		if len(cl) > 0 {
-			primeiros = append(primeiros, cl[0].Dupla)
-		}
-		if len(cl) > 1 {
-			segundos = append(segundos, cl[1].Dupla)
-		}
-	}
-	return append(primeiros, segundos...)
+	return cl[0].Dupla
 }
 
-type slotv struct {
-	dupla int
-	jogo  int
-}
-
-func (s slotv) vazio() bool { return s.dupla == 0 && s.jogo == 0 }
-
-func nomeFase(slots int) string {
-	switch slots {
-	case 2:
-		return "final"
-	case 4:
-		return "semifinal"
-	case 8:
-		return "quartas"
-	case 16:
-		return "oitavas"
-	}
-	return fmt.Sprintf("fase de %d", slots)
-}
-
-func (t *Torneio) GerarMataMata() {
-	seeds := t.classificados()
-	if len(seeds) < 2 {
-		return
-	}
-	n := 1
-	for n < len(seeds) {
-		n *= 2
-	}
-	atual := make([]slotv, n)
-	for i, id := range seeds {
-		atual[i] = slotv{dupla: id}
-	}
-	rodada := 0
-	for len(atual) > 1 {
-		m := len(atual)
-		prox := make([]slotv, m/2)
-		for i := 0; i < m/2; i++ {
-			a, b := atual[i], atual[m-1-i]
-			if b.vazio() {
-				prox[i] = a
-				continue
-			}
-			if a.vazio() {
-				prox[i] = b
-				continue
-			}
-			j := &Jogo{
-				ID:     t.novoID(),
-				Fase:   nomeFase(m),
-				Grupo:  -1,
-				Rodada: rodada,
-				Slot:   i,
-				A:      a.dupla,
-				B:      b.dupla,
-				DeA:    a.jogo,
-				DeB:    b.jogo,
-			}
-			t.Jogos = append(t.Jogos, j)
-			prox[i] = slotv{jogo: j.ID}
-		}
-		atual = prox
-		rodada++
-	}
-	t.MataMata = true
-}
-
-func (t *Torneio) propagar() {
-	for _, j := range t.Jogos {
-		if !j.Jogado {
-			continue
-		}
-		v := j.Vencedor()
-		for _, k := range t.Jogos {
-			if k.DeA == j.ID {
-				k.A = v
-			}
-			if k.DeB == j.ID {
-				k.B = v
-			}
-		}
-	}
-	t.Campea = 0
-	for _, j := range t.Jogos {
-		if j.Fase == "final" && j.Jogado {
-			t.Campea = j.Vencedor()
-		}
-	}
-}
-
-func (t *Torneio) Eliminadas() []int {
-	if !t.MataMata {
-		return nil
-	}
-	visto := map[int]bool{}
+func (t *Torneio) SemChance() []int {
 	var out []int
-	marcar := func(id int) {
-		if id != 0 && !visto[id] {
-			visto[id] = true
-			out = append(out, id)
-		}
-	}
-	for _, d := range t.Duplas {
-		if !t.passouDaFaseDeGrupos(d.ID) {
-			marcar(d.ID)
-		}
-	}
-	for _, j := range t.Jogos {
-		if j.Fase != "grupo" && j.Jogado {
-			marcar(j.Perdedor())
+	for _, l := range t.Classificacao() {
+		if l.SemChanc {
+			out = append(out, l.Dupla)
 		}
 	}
 	return out
 }
 
-func (t *Torneio) passouDaFaseDeGrupos(id int) bool {
-	for _, c := range t.classificados() {
-		if c == id {
-			return true
-		}
-	}
-	return false
-}
-
-func (t *Torneio) RegistrarPlacar(jogoID, a, b int) (*Jogo, error) {
+func (t *Torneio) RegistrarPlacar(jogoID, a, b int) (*Jogo, bool, error) {
 	j := t.Jogo(jogoID)
 	if j == nil {
-		return nil, fmt.Errorf("não existe o jogo J%d", jogoID)
-	}
-	if !j.Pronto() {
-		return nil, fmt.Errorf("o J%d ainda depende de outros resultados", jogoID)
+		return nil, false, fmt.Errorf("não existe o jogo J%d", jogoID)
 	}
 	if a == b {
-		return nil, errors.New("no vôlei não tem empate")
+		return nil, false, errors.New("no vôlei não tem empate")
 	}
 	if t.Formato == "sets" {
 		if a > 2 || b > 2 || (a != 2 && b != 2) {
-			return nil, errors.New("no formato sets o placar é 2x0, 2x1, 1x2 ou 0x2 (troque com !formato pontos)")
+			return nil, false, errors.New("no formato sets o placar é 2x0, 2x1, 1x2 ou 0x2 (troque com !formato pontos)")
 		}
 	}
+	corrigido := j.Jogado
 	j.PlacarA = a
 	j.PlacarB = b
 	j.Jogado = true
 	j.Quando = time.Now()
-	t.Historico = append(t.Historico, j.ID)
+	if !corrigido {
+		t.Historico = append(t.Historico, j.ID)
+	}
 	t.UltimoJogo = j.ID
 	t.UltimoEm = time.Now()
-	return j, nil
+	t.AnunciouCampea = false
+	return j, corrigido, nil
 }
 
 func (t *Torneio) Desfazer() (*Jogo, error) {
@@ -524,47 +430,16 @@ func (t *Torneio) Desfazer() (*Jogo, error) {
 	}
 	j.Jogado = false
 	j.PlacarA, j.PlacarB = 0, 0
-	if t.MataMata && t.faseDeGruposFoiDesfeita() {
-		t.removerMataMata()
-	}
-	t.limparPropagacao()
-	t.propagar()
 	t.UltimoJogo = 0
+	t.AnunciouCampea = false
 	return j, nil
 }
 
-func (t *Torneio) faseDeGruposFoiDesfeita() bool {
-	return !t.GruposEncerrados()
-}
-
-func (t *Torneio) removerMataMata() {
-	var restantes []*Jogo
-	for _, j := range t.Jogos {
-		if j.Fase == "grupo" {
-			restantes = append(restantes, j)
-		}
-	}
-	t.Jogos = restantes
-	t.MataMata = false
-	t.Campea = 0
-}
-
-func (t *Torneio) limparPropagacao() {
-	for _, j := range t.Jogos {
-		if j.DeA != 0 {
-			j.A = 0
-		}
-		if j.DeB != 0 {
-			j.B = 0
-		}
-	}
-}
-
 func (t *Torneio) Atualizar() {
-	if t.Sorteado && !t.MataMata && t.GruposEncerrados() {
-		t.GerarMataMata()
+	t.Campea = 0
+	if t.Encerrado() {
+		t.Campea = t.Lider()
 	}
-	t.propagar()
 }
 
 func (t *Torneio) FotoDaDupla(id int) string {

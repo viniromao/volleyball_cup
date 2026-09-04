@@ -81,32 +81,33 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		}
 		return "📐 Formato: *set único*. Manda o placar em pontos, ex: `!placar 21x18`.", true
 
-	case "sortear", "sorteio", "sortear!":
-		n := 0
+	case "sortear", "sorteio", "gerar", "comecar", "começar":
+		turnos := 0
 		if resto != "" {
 			if v, err := strconv.Atoi(strings.Fields(resto)[0]); err == nil {
-				n = v
+				turnos = v
 			}
 		}
 		if t.Sorteado {
-			return "Já sorteei. Se quiser refazer tudo: `!zerar CONFIRMA`.", false
+			return "A tabela já está gerada. Se quiser refazer tudo: `!zerar CONFIRMA`.", false
 		}
-		if err := t.Sortear(n); err != nil {
+		if err := t.Sortear(turnos); err != nil {
 			return "⚠️ " + err.Error(), false
 		}
 		var b2 strings.Builder
-		b2.WriteString("🎲 *SORTEIO FEITO!*\n")
-		for g := range t.Grupos {
-			fmt.Fprintf(&b2, "\n*Grupo %s*\n", letraGrupo(g))
-			for _, id := range t.Grupos[g] {
-				fmt.Fprintf(&b2, "• %s\n", t.NomeDupla(id))
-			}
+		b2.WriteString("🎲 *TABELA GERADA!*\n\n")
+		nome := "turno único"
+		if t.Turnos == 2 {
+			nome = "turno e returno"
+		} else if t.Turnos > 2 {
+			nome = fmt.Sprintf("%d turnos", t.Turnos)
 		}
-		fmt.Fprintf(&b2, "\n%d jogos na fase de grupos. As 2 melhores de cada grupo vão pro mata-mata.\n\n%s", len(t.JogosDaFaseDeGrupos()), t.RenderJogos())
+		fmt.Fprintf(&b2, "Pontos corridos, %s: %d duplas, %d jogos em %d rodadas.\n", nome, len(t.Duplas), len(t.Jogos), t.Rodadas())
+		fmt.Fprintf(&b2, "Cada dupla joga contra todas as outras. Campeã é quem somar mais pontos no fim.\n\n%s", t.RenderJogos())
 		return b2.String(), true
 
-	case "chaves", "chave", "bracket", "copa":
-		return t.RenderChaves(), false
+	case "campeonato", "chaves", "chave", "copa", "rodadas":
+		return t.RenderCampeonato(), false
 
 	case "tabela", "classificacao", "classificação":
 		return t.RenderTabela(), false
@@ -116,40 +117,32 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 
 	case "placar", "resultado", "jogo":
 		if !t.Sorteado {
-			return "Sorteia primeiro: `!sortear`.", false
+			return "Gera a tabela primeiro: `!sortear`.", false
 		}
 		m := rePlacar.FindStringSubmatch(strings.TrimSpace(resto))
-		if m == nil {
-			return "Manda `!placar 2x1` (jogo da vez) ou `!placar 7 2x1` (jogo J7).", false
+		if m == nil || m[1] == "" {
+			return "Manda o *ID do jogo* junto: `!placar 7 2x1` (jogo J7).\n\n" + t.RenderJogos(), false
 		}
-		id := 0
-		if m[1] != "" {
-			id, _ = strconv.Atoi(m[1])
-		} else {
-			p := t.ProximoJogo()
-			if p == nil {
-				return "Não tem jogo pendente pra registrar.", false
-			}
-			id = p.ID
-		}
+		id, _ := strconv.Atoi(m[1])
 		a, _ := strconv.Atoi(m[2])
 		bb, _ := strconv.Atoi(m[3])
-		j, err := t.RegistrarPlacar(id, a, bb)
+		j, corrigido, err := t.RegistrarPlacar(id, a, bb)
 		if err != nil {
 			return "⚠️ " + err.Error(), false
 		}
-		antesMataMata := t.MataMata
 		t.Atualizar()
 
+		titulo := "registrado"
+		if corrigido {
+			titulo = "corrigido"
+		}
 		var out strings.Builder
-		fmt.Fprintf(&out, "📝 *J%d registrado*\n%s %d x %d %s\n🏅 %s leva.",
-			j.ID, t.NomeDupla(j.A), j.PlacarA, j.PlacarB, t.NomeDupla(j.B), t.NomeDupla(j.Vencedor()))
+		fmt.Fprintf(&out, "📝 *J%d %s*\n%s %d x %d %s\n🏅 %s leva.",
+			j.ID, titulo, t.NomeDupla(j.A), j.PlacarA, j.PlacarB, t.NomeDupla(j.B), t.NomeDupla(j.Vencedor()))
 		out.WriteString("\n\nManda a foto da dupla comemorando que eu grudo nesse jogo. 📸")
-
-		if !antesMataMata && t.MataMata {
-			out.WriteString("\n\n🔔 *FASE DE GRUPOS ENCERRADA!*\n\n")
-			out.WriteString(t.RenderChaves())
-		} else if t.Campea == 0 {
+		out.WriteString("\n\n")
+		out.WriteString(t.RenderTabela())
+		if t.Campea == 0 {
 			if p := t.ProximoJogo(); p != nil {
 				fmt.Fprintf(&out, "\n\n▶ Próximo: %s", t.LinhaJogo(p))
 			}
@@ -166,7 +159,7 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 
 	case "zerar", "reset":
 		if strings.ToUpper(strings.TrimSpace(resto)) != "CONFIRMA" {
-			return "Isso apaga duplas, grupos e resultados. Se for isso mesmo: `!zerar CONFIRMA`", false
+			return "Isso apaga duplas, tabela e resultados. Se for isso mesmo: `!zerar CONFIRMA`", false
 		}
 		*t = *NovoTorneio(t.Chat)
 		return "🧹 Zerei tudo. Comece cadastrando: `!dupla João & Maria`", true

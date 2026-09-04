@@ -1,8 +1,8 @@
 # 🏐 Bot da Copa de Vôlei
 
-Bot de WhatsApp em Go que organiza uma copa de duplas num grupo de amigos:
-cadastra duplas, sorteia grupos, monta a fase de grupos e o mata-mata,
-registra placares e mostra as chaves com quem caiu e quem continua.
+Bot de WhatsApp em Go que organiza uma copa de duplas em pontos corridos num
+grupo de amigos: cadastra duplas, gera a tabela de todos contra todos,
+registra placares por ID e mantém a classificação em dia.
 
 Conecta como **aparelho conectado** (mesmo mecanismo do WhatsApp Web) usando
 `whatsmeow` — é assim que dá pra ler e responder em **grupo**, coisa que a API
@@ -34,33 +34,51 @@ Variáveis: `COPA_DATA` (pasta de dados, padrão `dados`) e `COPA_LOG`
 | `!duplas` | lista as inscritas |
 | `!remover João` | tira a dupla |
 | `!formato sets\|pontos` | melhor de 3 sets (padrão) ou set único em pontos |
-| `!sortear` | sorteia os grupos e monta os jogos |
-| `!sortear 2` | força a quantidade de grupos |
-| `!jogos` | o que falta jogar |
-| `!placar 2x1` | resultado do jogo da vez |
-| `!placar 7 2x1` | resultado do jogo J7 |
-| `!tabela` | classificação dos grupos |
-| `!chaves` | grupos, mata-mata, eliminadas e quem segue |
+| `!sortear` | gera a tabela, turno único |
+| `!sortear 2` | turno e returno |
+| `!jogos` | o que falta jogar, com os IDs |
+| `!placar 7 2x1` | placar do jogo J7 |
+| `!tabela` | a classificação |
+| `!campeonato` | tabela + todas as rodadas |
 | `!desfazer` | apaga o último resultado |
 | `!zerar CONFIRMA` | recomeça do zero |
+
+### Placar é sempre pelo ID do jogo
+
+Cada jogo tem um ID fixo (`J7`), que aparece em `!jogos` e `!campeonato`. O
+placar vai sempre com esse ID — a ordem em que os jogos acontecem não importa,
+então dá pra registrar fora de ordem, com duas quadras rodando ao mesmo tempo:
+
+```
+!placar 7 2x1
+!placar 12 2x0
+!placar 9 1x2
+```
+
+Mandar de novo no mesmo ID **corrige** o resultado anterior (ele responde
+`J7 corrigido` e refaz a tabela). `!desfazer` apaga o último placar registrado.
 
 ### Fotos
 
 Manda a foto (ou sticker) da dupla comemorando **logo depois do placar** — ou
-com `!placar 2x1` na legenda da imagem — que ela fica grudada naquele jogo
-(aparece um 📸 na chave). No fim, a foto da campeã volta com a mensagem do
-título. A janela pra anexar é de 20 minutos após o placar.
+com `!placar 7 2x1` na legenda da imagem — que ela fica grudada naquele jogo
+(aparece um 📸 na lista de rodadas). No fim, a foto da campeã volta com a
+mensagem do título. A janela pra anexar é de 20 minutos após o placar.
 
 ## Formato
 
-- Grupos sorteados na hora: ~4 duplas por grupo (`!sortear N` muda isso).
-- Fase de grupos: todos contra todos dentro do grupo.
-- Pontuação (formato `sets`): 2x0 = 3 pts, 2x1 = 2 pts, 1x2 = 1 pt, 0x2 = 0.
-- Desempate: pontos → saldo de sets → sets ganhos → confronto direto.
-- Classificam-se as 2 melhores de cada grupo (ou as 4 melhores, se houver
-  um grupo só). Quem não passa, cai já na chave como eliminada.
-- Mata-mata com chaveamento por posição (1º de um grupo pega 2º de outro) e
-  bye pros melhores quando o número de classificadas não é potência de 2.
+Pontos corridos: **todas as duplas jogam contra todas**, e campeã é quem somar
+mais pontos no fim. Não tem grupo nem mata-mata, ninguém é eliminado.
+
+- A tabela é gerada pelo método do círculo, então dentro de cada rodada nenhuma
+  dupla joga duas vezes seguidas — todo mundo descansa parecido.
+- Com número ímpar de duplas, uma folga por rodada.
+- `!sortear 2` faz turno e returno (o mando de quadra inverte no returno).
+- Pontuação no formato `sets`: 2x0 = 3 pts, 2x1 = 2 pts, 1x2 = 1 pt, 0x2 = 0.
+  No formato `pontos` (set único, ex: 21x18): vitória 3, derrota 0.
+- Desempate: pontos → vitórias → saldo de sets → sets ganhos → confronto direto.
+- Enquanto rola, a tabela mostra o líder e quem já está **sem chance de título**
+  (quem não alcança mais o líder nem ganhando tudo que falta).
 
 ## Deploy na VPS
 
