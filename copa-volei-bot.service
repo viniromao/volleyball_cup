@@ -1,0 +1,16 @@
+[Unit]
+Description=Bot da Copa de Volei (WhatsApp)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=copa
+WorkingDirectory=/opt/copa-volei-bot
+ExecStart=/opt/copa-volei-bot/copa-volei-bot
+Environment=COPA_DATA=/opt/copa-volei-bot/dados
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
