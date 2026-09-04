@@ -85,8 +85,11 @@ quem somar mais pontos no fim. Não tem grupo nem mata-mata, ninguém é elimina
 - Cada vitória vale **3 pontos** na tabela, independente da margem. A margem
   entra no saldo, que é o primeiro critério de desempate.
 - A tabela é gerada pelo método do círculo, então dentro de cada rodada nenhuma
-  dupla joga duas vezes seguidas — todo mundo descansa parecido. Com número
-  ímpar de duplas, uma folga por rodada.
+  dupla joga duas vezes seguidas — todo mundo descansa parecido.
+- **Número ímpar de duplas**: uma dupla folga por rodada, e ao longo do turno
+  cada uma folga exatamente uma vez (duas no total, com o returno). A folga
+  aparece em `!jogos` e `!campeonato` como `😴 folga: Fulano & Ciclano`.
+  Ninguém joga a mais nem a menos: todas fazem os mesmos `2×(n-1)` jogos.
 - No returno o mando de quadra inverte: quem foi o lado A na ida é o lado B na
   volta.
 - Desempate: pontos → vitórias → saldo de pontos → pontos marcados →

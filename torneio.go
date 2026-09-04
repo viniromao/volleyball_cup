@@ -221,6 +221,29 @@ func (t *Torneio) Rodadas() int {
 	return max
 }
 
+func (t *Torneio) Folga(rodada int) []int {
+	jogando := map[int]bool{}
+	achou := false
+	for _, j := range t.Jogos {
+		if j.Rodada != rodada {
+			continue
+		}
+		achou = true
+		jogando[j.A] = true
+		jogando[j.B] = true
+	}
+	if !achou {
+		return nil
+	}
+	var out []int
+	for _, d := range t.Duplas {
+		if !jogando[d.ID] {
+			out = append(out, d.ID)
+		}
+	}
+	return out
+}
+
 func (t *Torneio) JogosPendentes() []*Jogo {
 	var out []*Jogo
 	for _, j := range t.Jogos {

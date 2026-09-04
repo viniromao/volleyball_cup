@@ -152,6 +152,7 @@ func (t *Torneio) RenderJogos() string {
 			}
 			fmt.Fprintf(&b, "%s%s\n", prefixo, t.LinhaJogo(j))
 		}
+		b.WriteString(t.linhaFolga(r))
 	}
 	b.WriteString("\nPra registrar: `!placar <id> 21x18` — ex: `!placar " + fmt.Sprint(primeiro) + " 21x18`")
 	return b.String()
@@ -170,6 +171,19 @@ func (t *Torneio) RenderCampeonato() string {
 		for _, j := range m[r] {
 			fmt.Fprintf(&b, "%s\n", t.LinhaJogo(j))
 		}
+		b.WriteString(t.linhaFolga(r))
 	}
 	return b.String()
+}
+
+func (t *Torneio) linhaFolga(rodada int) string {
+	folga := t.Folga(rodada)
+	if len(folga) == 0 {
+		return ""
+	}
+	var nomes []string
+	for _, id := range folga {
+		nomes = append(nomes, t.NomeDupla(id))
+	}
+	return "😴 folga: " + strings.Join(nomes, ", ") + "\n"
 }

@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const separadorLegenda = "\x1e"
+
 var (
 	reSeparador = regexp.MustCompile(`(?i)\s*(?:&|\+|,|/|\se\s|\scom\s|\sx\s)\s*`)
 	rePlacar    = regexp.MustCompile(`(?i)^(?:j?(\d+)\s+)?(\d+)\s*[x×:-]\s*(\d+)$`)
@@ -101,7 +103,9 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		var b2 strings.Builder
 		b2.WriteString("🎲 *TABELA GERADA!*\n\n")
 		fmt.Fprintf(&b2, "Pontos corridos, turno e returno: %d duplas, %d jogos em %d rodadas.\n", len(t.Duplas), len(t.Jogos), t.Rodadas())
-		fmt.Fprintf(&b2, "Cada dupla enfrenta cada uma das outras *2 vezes*. Vitória vale %d pontos; campeã é quem somar mais no fim.\n\n%s", pontosPorVitoria, t.RenderJogos())
+		fmt.Fprintf(&b2, "Cada dupla enfrenta cada uma das outras *2 vezes*. Vitória vale %d pontos; campeã é quem somar mais no fim.", pontosPorVitoria)
+		b2.WriteString(separadorLegenda)
+		b2.WriteString(t.RenderJogos())
 		return b2.String(), true
 
 	case "campeonato", "chaves", "chave", "copa", "rodadas":

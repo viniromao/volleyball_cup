@@ -192,11 +192,20 @@ func (b *Bot) aoReceber(evt *events.Message) {
 	dentroDaJanela := time.Since(t.UltimoEm) < janelaFoto
 	b.mu.Unlock()
 
-	if sorteouAgora {
-		b.hastearBandeira(evt.Info.Chat)
-	}
 	if resposta != "" {
-		b.responder(evt.Info.Chat, resposta)
+		legenda, detalhes := dividirLegenda(resposta)
+		if sorteouAgora {
+			naLegenda := legenda
+			if len(naLegenda) > limiteLegenda {
+				naLegenda = ""
+			}
+			if b.hastearBandeira(evt.Info.Chat, naLegenda) && naLegenda != "" {
+				legenda = ""
+			}
+		}
+		if texto := juntar(legenda, detalhes); texto != "" {
+			b.responder(evt.Info.Chat, texto)
+		}
 	}
 
 	if temMidia && alvoFoto != 0 && dentroDaJanela {
@@ -328,14 +337,36 @@ func (b *Bot) enviarImagem(chat types.JID, caminho, legenda string) error {
 	return err
 }
 
-func (b *Bot) hastearBandeira(chat types.JID) {
+const limiteLegenda = 1000
+
+func dividirLegenda(texto string) (string, string) {
+	partes := strings.SplitN(texto, separadorLegenda, 2)
+	if len(partes) == 1 {
+		return partes[0], ""
+	}
+	return partes[0], partes[1]
+}
+
+func juntar(a, b string) string {
+	if a == "" {
+		return b
+	}
+	if b == "" {
+		return a
+	}
+	return a + "\n\n" + b
+}
+
+func (b *Bot) hastearBandeira(chat types.JID, legenda string) bool {
 	caminho := b.bandeira()
 	if caminho == "" {
-		return
+		return false
 	}
-	if err := b.enviarImagem(chat, caminho, ""); err != nil {
+	if err := b.enviarImagem(chat, caminho, legenda); err != nil {
 		fmt.Fprintln(os.Stderr, "erro ao enviar a bandeira:", err)
+		return false
 	}
+	return true
 }
 
 func (b *Bot) bandeira() string {
