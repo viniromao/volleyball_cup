@@ -18,12 +18,18 @@ go build -buildvcs=false -o copa-volei-bot .
 Na primeira execução aparece um QR no terminal:
 **WhatsApp > Aparelhos conectados > Conectar aparelho**.
 
+Quando o sorteio sai, o bot manda a bandeira da copa
+(`assets/bandeira.png`) antes da tabela. Ele procura o arquivo em
+`$COPA_BANDEIRA`, depois em `./assets/`, depois ao lado do executável — se não
+achar, só avisa no log e segue sem a imagem.
+
 A sessão fica em `dados/sessao.db` — depois disso não precisa escanear de novo.
 O estado da copa fica em `dados/torneios.json` (um torneio por conversa) e as
 fotos em `dados/midia/`.
 
-Variáveis: `COPA_DATA` (pasta de dados, padrão `dados`) e `COPA_LOG`
-(`DEBUG`/`INFO`/`WARN`, padrão `WARN`).
+Variáveis: `COPA_DATA` (pasta de dados, padrão `dados`), `COPA_LOG`
+(`DEBUG`/`INFO`/`WARN`, padrão `WARN`) e `COPA_BANDEIRA` (caminho da imagem do
+sorteio).
 
 ## Comandos
 
@@ -94,14 +100,14 @@ quem somar mais pontos no fim. Não tem grupo nem mata-mata, ninguém é elimina
 
 ```bash
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o copa-volei-bot .
-scp copa-volei-bot copa-volei-bot.service usuario@vps:/tmp/
+scp -r copa-volei-bot copa-volei-bot.service assets usuario@vps:/tmp/
 ```
 
 Na VPS:
 
 ```bash
 sudo useradd -r -m -d /opt/copa-volei-bot copa
-sudo mv /tmp/copa-volei-bot /opt/copa-volei-bot/
+sudo mv /tmp/copa-volei-bot /tmp/assets /opt/copa-volei-bot/
 sudo mv /tmp/copa-volei-bot.service /etc/systemd/system/
 sudo chown -R copa:copa /opt/copa-volei-bot
 sudo -u copa /opt/copa-volei-bot/copa-volei-bot   # escaneia o QR uma vez, ctrl+c

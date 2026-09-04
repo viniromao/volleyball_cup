@@ -183,13 +183,18 @@ func (b *Bot) aoReceber(evt *events.Message) {
 
 	var resposta string
 	var salvar bool
+	sorteadoAntes := t.Sorteado
 	if strings.HasPrefix(texto, "!") {
 		resposta, salvar = b.Executar(t, texto)
 	}
+	sorteouAgora := !sorteadoAntes && t.Sorteado
 	alvoFoto := t.UltimoJogo
 	dentroDaJanela := time.Since(t.UltimoEm) < janelaFoto
 	b.mu.Unlock()
 
+	if sorteouAgora {
+		b.hastearBandeira(evt.Info.Chat)
+	}
 	if resposta != "" {
 		b.responder(evt.Info.Chat, resposta)
 	}
@@ -290,40 +295,74 @@ func (b *Bot) responder(chat types.JID, texto string) {
 	}
 }
 
-func (b *Bot) comemorar(chat types.JID, nome, foto string) {
-	legenda := fmt.Sprintf("🏆🏐 *CAMPEÃS DA COPA: %s* 🏐🏆\n\nAcabou! Parabéns, duplas. `!chaves` mostra o caminho inteiro.", nome)
-	ext := strings.ToLower(filepath.Ext(foto))
-	if foto == "" || (ext != ".jpg" && ext != ".jpeg" && ext != ".png") {
-		b.responder(chat, legenda)
-		return
+func (b *Bot) enviarImagem(chat types.JID, caminho, legenda string) error {
+	ext := strings.ToLower(filepath.Ext(caminho))
+	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" {
+		return fmt.Errorf("formato não enviável: %s", ext)
 	}
-	dados, err := os.ReadFile(foto)
+	dados, err := os.ReadFile(caminho)
 	if err != nil {
-		b.responder(chat, legenda)
-		return
+		return err
 	}
 	up, err := b.cli.Upload(context.Background(), dados, whatsmeow.MediaImage)
 	if err != nil {
-		b.responder(chat, legenda)
-		return
+		return err
 	}
 	mime := "image/jpeg"
 	if ext == ".png" {
 		mime = "image/png"
 	}
-	_, err = b.cli.SendMessage(context.Background(), chat, &waE2E.Message{
-		ImageMessage: &waE2E.ImageMessage{
-			Caption:       proto.String(legenda),
-			Mimetype:      proto.String(mime),
-			URL:           &up.URL,
-			DirectPath:    &up.DirectPath,
-			MediaKey:      up.MediaKey,
-			FileEncSHA256: up.FileEncSHA256,
-			FileSHA256:    up.FileSHA256,
-			FileLength:    proto.Uint64(uint64(len(dados))),
-		},
-	})
-	if err != nil {
+	msg := &waE2E.ImageMessage{
+		Mimetype:      proto.String(mime),
+		URL:           &up.URL,
+		DirectPath:    &up.DirectPath,
+		MediaKey:      up.MediaKey,
+		FileEncSHA256: up.FileEncSHA256,
+		FileSHA256:    up.FileSHA256,
+		FileLength:    proto.Uint64(uint64(len(dados))),
+	}
+	if legenda != "" {
+		msg.Caption = proto.String(legenda)
+	}
+	_, err = b.cli.SendMessage(context.Background(), chat, &waE2E.Message{ImageMessage: msg})
+	return err
+}
+
+func (b *Bot) hastearBandeira(chat types.JID) {
+	caminho := b.bandeira()
+	if caminho == "" {
+		return
+	}
+	if err := b.enviarImagem(chat, caminho, ""); err != nil {
+		fmt.Fprintln(os.Stderr, "erro ao enviar a bandeira:", err)
+	}
+}
+
+func (b *Bot) bandeira() string {
+	var candidatos []string
+	if p := os.Getenv("COPA_BANDEIRA"); p != "" {
+		candidatos = append(candidatos, p)
+	}
+	candidatos = append(candidatos, filepath.Join("assets", "bandeira.png"))
+	if exe, err := os.Executable(); err == nil {
+		candidatos = append(candidatos, filepath.Join(filepath.Dir(exe), "assets", "bandeira.png"))
+	}
+	for _, c := range candidatos {
+		if _, err := os.Stat(c); err == nil {
+			return c
+		}
+	}
+	fmt.Fprintln(os.Stderr, "aviso: não achei assets/bandeira.png, sigo sem a bandeira")
+	return ""
+}
+
+func (b *Bot) comemorar(chat types.JID, nome, foto string) {
+	legenda := fmt.Sprintf("🏆🏐 *CAMPEÃS DA COPA: %s* 🏐🏆\n\nAcabou! Parabéns, duplas. `!tabela` mostra como terminou.", nome)
+	if foto == "" {
+		b.responder(chat, legenda)
+		return
+	}
+	if err := b.enviarImagem(chat, foto, legenda); err != nil {
 		b.responder(chat, legenda)
 	}
 }
