@@ -33,6 +33,7 @@ Variáveis: `COPA_DATA` (pasta de dados, padrão `dados`) e `COPA_LOG`
 | `!dupla João & Maria` | cadastra uma dupla |
 | `!duplas` | lista as inscritas |
 | `!remover João` | tira a dupla |
+| `!ate 17` | até quantos pontos vai cada jogo |
 | `!sortear` | gera a tabela, ida e volta |
 | `!jogos` | o que falta jogar, com os IDs |
 | `!placar 7 21x18` | placar do jogo J7 |
@@ -69,7 +70,12 @@ Pontos corridos: **todas as duplas jogam contra todas, duas vezes**, e campeã �
 quem somar mais pontos no fim. Não tem grupo nem mata-mata, ninguém é eliminado.
 
 - O placar é a **quantidade de pontos do jogo** (`21x18`), não sets. Quem fizer
-  mais pontos vence — não importa se o jogo foi até 15, 21 ou 25.
+  mais pontos vence.
+- Todos os jogos vão até o mesmo alvo. O bot anota o alvo sozinho no primeiro
+  placar que você registrar (`17x6` → alvo 17) e confere os seguintes: recusa
+  um placar cujo vencedor não chegou lá, e recusa um que passou do alvo sem ser
+  vantagem (`20x5` com alvo 17). Vantagem passa normal: `19x17`, `18x16`.
+  `!ate 21` muda o alvo, `!ate livre` desliga a conferência.
 - Cada vitória vale **3 pontos** na tabela, independente da margem. A margem
   entra no saldo, que é o primeiro critério de desempate.
 - A tabela é gerada pelo método do círculo, então dentro de cada rodada nenhuma

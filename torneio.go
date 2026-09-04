@@ -58,6 +58,7 @@ func (j *Jogo) Envolve(id int) bool {
 
 type Torneio struct {
 	Chat           string    `json:"chat"`
+	Alvo           int       `json:"alvo"`
 	Turnos         int       `json:"turnos"`
 	Duplas         []*Dupla  `json:"duplas"`
 	Jogos          []*Jogo   `json:"jogos"`
@@ -386,6 +387,17 @@ func (t *Torneio) RegistrarPlacar(jogoID, a, b int) (*Jogo, bool, error) {
 	if a == b {
 		return nil, false, errors.New("empate não decide jogo, confere o placar")
 	}
+	venc, perd := a, b
+	if b > a {
+		venc, perd = b, a
+	}
+	if t.Alvo == 0 {
+		t.Alvo = venc
+	} else if venc < t.Alvo {
+		return nil, false, fmt.Errorf("os jogos vão até %d, então o vencedor tem que chegar lá (mude com `!ate %d`)", t.Alvo, venc)
+	} else if venc > t.Alvo && perd < t.Alvo-1 {
+		return nil, false, fmt.Errorf("%dx%d passa de %d sem ser vantagem — confere o placar (jogo até %d só passa disso empatando em %d)", venc, perd, t.Alvo, t.Alvo, t.Alvo-1)
+	}
 	corrigido := j.Jogado
 	j.PlacarA = a
 	j.PlacarB = b
@@ -415,6 +427,26 @@ func (t *Torneio) Desfazer() (*Jogo, error) {
 	t.UltimoJogo = 0
 	t.AnunciouCampea = false
 	return j, nil
+}
+
+func (t *Torneio) DefinirAlvo(n int) error {
+	if n < 0 {
+		return errors.New("o alvo não pode ser negativo")
+	}
+	for _, j := range t.Jogos {
+		if !j.Jogado {
+			continue
+		}
+		venc := j.PlacarA
+		if j.PlacarB > venc {
+			venc = j.PlacarB
+		}
+		if n > 0 && venc < n {
+			return fmt.Errorf("o J%d terminou em %dx%d, que não chega a %d — corrija o placar antes", j.ID, j.PlacarA, j.PlacarB, n)
+		}
+	}
+	t.Alvo = n
+	return nil
 }
 
 func (t *Torneio) Atualizar() {

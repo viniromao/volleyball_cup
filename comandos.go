@@ -70,6 +70,27 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		}
 		return fmt.Sprintf("🗑️ Removi a dupla *%s*.", d.Nome()), true
 
+	case "ate", "até", "alvo":
+		f := strings.ToLower(strings.TrimSpace(resto))
+		if f == "" {
+			if t.Alvo == 0 {
+				return "Ainda não sei até quantos pontos vão os jogos — eu anoto sozinho no primeiro `!placar`.\nOu define agora: `!ate 17`.", false
+			}
+			return fmt.Sprintf("Os jogos vão até *%d* pontos. Pra mudar: `!ate 21`. Pra desligar a conferência: `!ate livre`.", t.Alvo), false
+		}
+		if f == "livre" || f == "0" {
+			t.Alvo = 0
+			return "🔓 Conferência desligada. Agora eu aceito qualquer placar.", true
+		}
+		n, err := strconv.Atoi(f)
+		if err != nil {
+			return "Manda `!ate 17` (ou `!ate livre` pra não conferir).", false
+		}
+		if err := t.DefinirAlvo(n); err != nil {
+			return "⚠️ " + err.Error(), false
+		}
+		return fmt.Sprintf("🎯 Anotado: os jogos vão até *%d* pontos. Vou conferir os placares por isso.", n), true
+
 	case "sortear", "sorteio", "gerar", "comecar", "começar":
 		if t.Sorteado {
 			return "A tabela já está gerada. Se quiser refazer tudo: `!zerar CONFIRMA`.", false
@@ -103,6 +124,7 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		id, _ := strconv.Atoi(m[1])
 		a, _ := strconv.Atoi(m[2])
 		bb, _ := strconv.Atoi(m[3])
+		alvoAntes := t.Alvo
 		j, corrigido, err := t.RegistrarPlacar(id, a, bb)
 		if err != nil {
 			return "⚠️ " + err.Error(), false
@@ -116,6 +138,9 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		var out strings.Builder
 		fmt.Fprintf(&out, "📝 *J%d %s*\n%s %d x %d %s\n🏅 %s leva.",
 			j.ID, titulo, t.NomeDupla(j.A), j.PlacarA, j.PlacarB, t.NomeDupla(j.B), t.NomeDupla(j.Vencedor()))
+		if alvoAntes == 0 && t.Alvo != 0 {
+			fmt.Fprintf(&out, "\n\n🎯 Anotei que os jogos vão até *%d* pontos — vou conferir os próximos por isso. Se não for, manda `!ate <n>` ou `!ate livre`.", t.Alvo)
+		}
 		out.WriteString("\n\nManda a foto da dupla comemorando que eu grudo nesse jogo. 📸")
 		out.WriteString("\n\n")
 		out.WriteString(t.RenderTabela())

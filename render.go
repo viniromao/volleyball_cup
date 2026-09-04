@@ -36,6 +36,8 @@ func RenderAjuda() string {
 		"`!duplas` — lista as duplas inscritas",
 		"`!remover João` — tira a dupla do João",
 		"",
+		"`!ate 17` — até quantos pontos vai cada jogo",
+		"",
 		"*Gerar a tabela*",
 		"`!sortear` — todos contra todos, ida e volta",
 		"",
@@ -75,7 +77,11 @@ func (t *Torneio) RenderTabela() string {
 		return "Ainda não gerei a tabela. Manda `!sortear`."
 	}
 	var b strings.Builder
-	b.WriteString("📊 *CLASSIFICAÇÃO*\n```\n")
+	if t.Alvo > 0 {
+		fmt.Fprintf(&b, "📊 *CLASSIFICAÇÃO* _(jogos até %d)_\n```\n", t.Alvo)
+	} else {
+		b.WriteString("📊 *CLASSIFICAÇÃO*\n```\n")
+	}
 	fmt.Fprintf(&b, "%-2s %-15s %2s %2s %2s %5s %3s\n", "#", "DUPLA", "J", "V", "D", "SALDO", "P")
 	for i, l := range t.Classificacao() {
 		fmt.Fprintf(&b, "%-2d %-15s %2d %2d %2d %+5d %3d\n",
