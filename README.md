@@ -101,21 +101,37 @@ quem somar mais pontos no fim. Não tem grupo nem mata-mata, ninguém é elimina
 
 ## Deploy na VPS
 
-```bash
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -buildvcs=false -o copa-volei-bot .
-scp -r copa-volei-bot copa-volei-bot.service assets usuario@vps:/tmp/
-```
+O bot roda 24/7 na VPS como serviço systemd (`copa-volei-bot.service`, usuário
+`copa`, pasta `/opt/copa-volei-bot`) com `Restart=always`, então volta sozinho
+se cair ou se a máquina reiniciar.
 
-Na VPS:
+Todo push na `main` dispara o workflow `.github/workflows/deploy.yml`, que
+compila o binário para linux/amd64, manda ele e a pasta `assets/` por `scp` e
+reinicia o serviço. Leva cerca de um minuto.
+
+Secrets usados pelo workflow (em *Settings > Secrets and variables > Actions*):
+
+| Secret | O que é |
+|---|---|
+| `VPS_HOST` | endereço da VPS |
+| `VPS_USER` | usuário do deploy (`copa`) |
+| `VPS_SSH_KEY` | chave privada ed25519 só desse usuário |
+| `VPS_KNOWN_HOSTS` | linhas do `known_hosts` da VPS |
+
+O usuário `copa` não tem senha e só pode usar `sudo` para
+`systemctl restart|status|is-active copa-volei-bot` (`/etc/sudoers.d/copa`).
+
+A pasta `dados/` (sessão do WhatsApp, torneios e fotos) vive só na VPS e nunca
+vai pro git. Primeira instalação numa máquina nova: copiar `dados/` de uma
+máquina já pareada ou rodar o binário uma vez na mão pra escanear o QR.
+
+Só uma instância pode usar a sessão por vez — rodar o bot localmente enquanto o
+serviço está de pé derruba um dos dois.
+
+Logs:
 
 ```bash
-sudo useradd -r -m -d /opt/copa-volei-bot copa
-sudo mv /tmp/copa-volei-bot /tmp/assets /opt/copa-volei-bot/
-sudo mv /tmp/copa-volei-bot.service /etc/systemd/system/
-sudo chown -R copa:copa /opt/copa-volei-bot
-sudo -u copa /opt/copa-volei-bot/copa-volei-bot   # escaneia o QR uma vez, ctrl+c
-sudo systemctl enable --now copa-volei-bot
-sudo journalctl -u copa-volei-bot -f
+ssh usuario@vps 'journalctl -u copa-volei-bot -f'
 ```
 
 Binário estático, sem cgo e sem dependência de sistema — o SQLite é o driver
