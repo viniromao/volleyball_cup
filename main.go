@@ -229,8 +229,8 @@ func (b *Bot) aoReceber(evt *events.Message) {
 	foto := ""
 	nome := ""
 	if anunciar {
-		foto = t.FotoDaDupla(campea)
-		nome = t.NomeDupla(campea)
+		foto = t.FotoDoTime(campea)
+		nome = t.NomeTime(campea)
 	}
 	b.mu.Unlock()
 
@@ -286,7 +286,7 @@ func (b *Bot) anexarFoto(evt *events.Message, chat string, jogoID int) bool {
 	}
 	novo := j.Foto == ""
 	j.Foto = caminho
-	venc := t.NomeDupla(j.Vencedor())
+	venc := t.NomeTime(j.Vencedor())
 	b.mu.Unlock()
 
 	if novo {
@@ -388,7 +388,7 @@ func (b *Bot) bandeira() string {
 }
 
 func (b *Bot) comemorar(chat types.JID, nome, foto string) {
-	legenda := fmt.Sprintf("🏆🏐 *CAMPEÃS DA COPA: %s* 🏐🏆\n\nAcabou! Parabéns, duplas. `!cup tabela` mostra como terminou.", nome)
+	legenda := fmt.Sprintf("🏆🏐 *CAMPEÕES DA COPA: %s* 🏐🏆\n\nAcabou! Parabéns, times. `!cup tabela` mostra como terminou.", nome)
 	if foto == "" {
 		b.responder(chat, legenda)
 		return

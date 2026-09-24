@@ -18,7 +18,13 @@ func (b *Bot) Carregar() error {
 		}
 		return err
 	}
-	return json.Unmarshal(data, &b.torneios)
+	if err := json.Unmarshal(data, &b.torneios); err != nil {
+		return err
+	}
+	for _, t := range b.torneios {
+		t.Migrar()
+	}
+	return nil
 }
 
 func (b *Bot) Salvar() error {

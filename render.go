@@ -15,8 +15,8 @@ func corta(s string, n int) string {
 }
 
 func (t *Torneio) LinhaJogo(j *Jogo) string {
-	a := t.NomeDupla(j.A)
-	b := t.NomeDupla(j.B)
+	a := t.NomeTime(j.A)
+	b := t.NomeTime(j.B)
 	if !j.Jogado {
 		return fmt.Sprintf("J%d  %s  x  %s", j.ID, a, b)
 	}
@@ -24,7 +24,7 @@ func (t *Torneio) LinhaJogo(j *Jogo) string {
 	if j.Foto != "" {
 		foto = " 📸"
 	}
-	return fmt.Sprintf("J%d  %s *%d x %d* %s  ✅ %s%s", j.ID, a, j.PlacarA, j.PlacarB, b, t.NomeDupla(j.Vencedor()), foto)
+	return fmt.Sprintf("J%d  %s *%d x %d* %s  ✅ %s%s", j.ID, a, j.PlacarA, j.PlacarB, b, t.NomeTime(j.Vencedor()), foto)
 }
 
 func RenderAjuda() string {
@@ -32,9 +32,9 @@ func RenderAjuda() string {
 		"🏐 *COPA DE VÔLEI — PONTOS CORRIDOS*",
 		"",
 		"*Antes de começar*",
-		"`!cup dupla João & Maria` — cadastra uma dupla",
-		"`!cup duplas` — lista as duplas inscritas",
-		"`!cup remover João` — tira a dupla do João",
+		"`!cup time João & Maria & Pedro` — cadastra um time, com quantas pessoas quiser (separa com `&`, `,` ou `e`; sem separador, cada palavra é uma pessoa)",
+		"`!cup times` — lista os times inscritos",
+		"`!cup remover João` — tira o time do João",
 		"",
 		"`!cup ate 17` — até quantos pontos vai cada jogo",
 		"",
@@ -50,24 +50,24 @@ func RenderAjuda() string {
 		"`!cup desfazer` — apaga o último resultado",
 		"",
 		"*Foto*",
-		"manda a foto/sticker da dupla comemorando logo depois do placar (ou com `!cup placar 7 21x18` na legenda) que eu grudo no jogo.",
+		"manda a foto/sticker do time comemorando logo depois do placar (ou com `!cup placar 7 21x18` na legenda) que eu grudo no jogo.",
 		"",
 		"`!cup zerar CONFIRMA` — recomeça tudo do zero",
 	}, "\n")
 }
 
-func (t *Torneio) RenderDuplas() string {
-	if len(t.Duplas) == 0 {
-		return "Nenhuma dupla inscrita ainda. Manda `!cup dupla Fulano & Ciclano`."
+func (t *Torneio) RenderTimes() string {
+	if len(t.Times) == 0 {
+		return "Nenhum time inscrito ainda. Manda `!cup time Fulano & Ciclano & Beltrano`."
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "🏐 *DUPLAS INSCRITAS* (%d)\n\n", len(t.Duplas))
-	for i, d := range t.Duplas {
-		fmt.Fprintf(&b, "%d. %s\n", i+1, d.Nome())
+	fmt.Fprintf(&b, "🏐 *TIMES INSCRITOS* (%d)\n\n", len(t.Times))
+	for i, e := range t.Times {
+		fmt.Fprintf(&b, "%d. %s\n", i+1, e.Nome())
 	}
 	if !t.Sorteado {
-		n := len(t.Duplas)
-		fmt.Fprintf(&b, "\nDá %d jogos (cada dupla enfrenta as outras 2 vezes). Manda `!cup sortear` quando fechar a lista.", n*(n-1))
+		n := len(t.Times)
+		fmt.Fprintf(&b, "\nDá %d jogos (cada time enfrenta os outros 2 vezes). Manda `!cup sortear` quando fechar a lista.", n*(n-1))
 	}
 	return b.String()
 }
@@ -82,10 +82,10 @@ func (t *Torneio) RenderTabela() string {
 	} else {
 		b.WriteString("📊 *CLASSIFICAÇÃO*\n```\n")
 	}
-	fmt.Fprintf(&b, "%-2s %-15s %2s %2s %2s %5s %3s\n", "#", "DUPLA", "J", "V", "D", "SALDO", "P")
+	fmt.Fprintf(&b, "%-2s %-15s %2s %2s %2s %5s %3s\n", "#", "TIME", "J", "V", "D", "SALDO", "P")
 	for i, l := range t.Classificacao() {
 		fmt.Fprintf(&b, "%-2d %-15s %2d %2d %2d %+5d %3d\n",
-			i+1, corta(t.NomeDupla(l.Dupla), 15), l.Jogos, l.Vitoria, l.Derrota, l.Saldo(), l.Pontos)
+			i+1, corta(t.NomeTime(l.Time), 15), l.Jogos, l.Vitoria, l.Derrota, l.Saldo(), l.Pontos)
 	}
 	b.WriteString("```")
 	b.WriteString(t.RenderSituacao())
@@ -95,17 +95,17 @@ func (t *Torneio) RenderTabela() string {
 func (t *Torneio) RenderSituacao() string {
 	var b strings.Builder
 	if t.Campea != 0 {
-		fmt.Fprintf(&b, "\n\n🏆 *CAMPEÃ: %s*", t.NomeDupla(t.Campea))
+		fmt.Fprintf(&b, "\n\n🏆 *CAMPEÃO: %s*", t.NomeTime(t.Campea))
 		return b.String()
 	}
 	faltam := len(t.JogosPendentes())
 	if lider := t.Lider(); lider != 0 && faltam < len(t.Jogos) {
-		fmt.Fprintf(&b, "\n🥇 Líder: *%s*", t.NomeDupla(lider))
+		fmt.Fprintf(&b, "\n🥇 Líder: *%s*", t.NomeTime(lider))
 	}
 	if sem := t.SemChance(); len(sem) > 0 {
 		var nomes []string
 		for _, id := range sem {
-			nomes = append(nomes, t.NomeDupla(id))
+			nomes = append(nomes, t.NomeTime(id))
 		}
 		fmt.Fprintf(&b, "\n❌ Sem chance de título: %s", strings.Join(nomes, ", "))
 	}
@@ -135,7 +135,7 @@ func (t *Torneio) RenderJogos() string {
 	pend := t.JogosPendentes()
 	if len(pend) == 0 {
 		if t.Campea != 0 {
-			return fmt.Sprintf("Acabou! 🏆 *%s* é a campeã.\n\nManda `!cup tabela` pra ver como terminou.", t.NomeDupla(t.Campea))
+			return fmt.Sprintf("Acabou! 🏆 *%s* é o campeão.\n\nManda `!cup tabela` pra ver como terminou.", t.NomeTime(t.Campea))
 		}
 		return "Todos os jogos já foram registrados."
 	}
@@ -160,7 +160,7 @@ func (t *Torneio) RenderJogos() string {
 
 func (t *Torneio) RenderCampeonato() string {
 	if !t.Sorteado {
-		return t.RenderDuplas()
+		return t.RenderTimes()
 	}
 	var b strings.Builder
 	b.WriteString(t.RenderTabela())
@@ -183,7 +183,7 @@ func (t *Torneio) linhaFolga(rodada int) string {
 	}
 	var nomes []string
 	for _, id := range folga {
-		nomes = append(nomes, t.NomeDupla(id))
+		nomes = append(nomes, t.NomeTime(id))
 	}
 	return "😴 folga: " + strings.Join(nomes, ", ") + "\n"
 }

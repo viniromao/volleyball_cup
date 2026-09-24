@@ -1,7 +1,7 @@
 # 🏐 Bot da Copa de Vôlei
 
-Bot de WhatsApp em Go que organiza uma copa de duplas em pontos corridos num
-grupo de amigos: cadastra duplas, gera a tabela de todos contra todos,
+Bot de WhatsApp em Go que organiza uma copa de times em pontos corridos num
+grupo de amigos: cadastra times (de qualquer tamanho), gera a tabela de todos contra todos,
 registra placares por ID e mantém a classificação em dia.
 
 Conecta como **aparelho conectado** (mesmo mecanismo do WhatsApp Web) usando
@@ -39,9 +39,9 @@ outros bots com `!`) é ignorado. `!cup` sozinho mostra a ajuda.
 | Comando | O que faz |
 |---|---|
 | `!cup` / `!cup ajuda` | lista tudo |
-| `!cup dupla João & Maria` | cadastra uma dupla |
-| `!cup duplas` | lista as inscritas |
-| `!cup remover João` | tira a dupla |
+| `!cup time João & Maria & Pedro` | cadastra um time |
+| `!cup times` | lista os inscritos |
+| `!cup remover João` | tira o time |
 | `!cup ate 17` | até quantos pontos vai cada jogo |
 | `!cup sortear` | gera a tabela, ida e volta |
 | `!cup jogos` | o que falta jogar, com os IDs |
@@ -50,6 +50,17 @@ outros bots com `!`) é ignorado. `!cup` sozinho mostra a ajuda.
 | `!cup campeonato` | tabela + todas as rodadas |
 | `!cup desfazer` | apaga o último resultado |
 | `!cup zerar CONFIRMA` | recomeça do zero |
+
+### Times
+
+Cada time tem quantas pessoas quiser, e o tamanho não precisa bater: um time de
+3 enfrenta um de 2 normalmente. Os nomes se separam com `&`, `,`, `+` ou `e`
+(`!cup time Ana, Bia e Caio`); sem separador, cada palavra é uma pessoa
+(`!cup time Ana Bia Caio`) — pra nome com sobrenome, use o separador
+(`!cup time João Silva & Maria`). A mesma pessoa não entra em dois times.
+
+Torneios salvos do tempo das duplas continuam valendo: cada dupla vira um time
+de 2 quando o bot carrega os dados.
 
 ### Placar é sempre pelo ID do jogo
 
@@ -68,14 +79,14 @@ Mandar de novo no mesmo ID **corrige** o resultado anterior (ele responde
 
 ### Fotos
 
-Manda a foto (ou sticker) da dupla comemorando **logo depois do placar** — ou
+Manda a foto (ou sticker) do time comemorando **logo depois do placar** — ou
 com `!cup placar 7 21x18` na legenda da imagem — que ela fica grudada naquele jogo
-(aparece um 📸 na lista de rodadas). No fim, a foto da campeã volta com a
+(aparece um 📸 na lista de rodadas). No fim, a foto do campeão volta com a
 mensagem do título. A janela pra anexar é de 20 minutos após o placar.
 
 ## Formato
 
-Pontos corridos: **todas as duplas jogam contra todas, duas vezes**, e campeã é
+Pontos corridos: **todos os times jogam contra todos, duas vezes**, e campeão é
 quem somar mais pontos no fim. Não tem grupo nem mata-mata, ninguém é eliminado.
 
 - O placar é a **quantidade de pontos do jogo** (`21x18`), não sets. Quem fizer
@@ -87,12 +98,12 @@ quem somar mais pontos no fim. Não tem grupo nem mata-mata, ninguém é elimina
   `!cup ate 21` muda o alvo, `!cup ate livre` desliga a conferência.
 - Cada vitória vale **3 pontos** na tabela, independente da margem. A margem
   entra no saldo, que é o primeiro critério de desempate.
-- A tabela é gerada pelo método do círculo, então dentro de cada rodada nenhuma
-  dupla joga duas vezes seguidas — todo mundo descansa parecido.
-- **Número ímpar de duplas**: uma dupla folga por rodada, e ao longo do turno
-  cada uma folga exatamente uma vez (duas no total, com o returno). A folga
+- A tabela é gerada pelo método do círculo, então dentro de cada rodada nenhum
+  time joga duas vezes seguidas — todo mundo descansa parecido.
+- **Número ímpar de times**: um time folga por rodada, e ao longo do turno
+  cada um folga exatamente uma vez (duas no total, com o returno). A folga
   aparece em `!cup jogos` e `!cup campeonato` como `😴 folga: Fulano & Ciclano`.
-  Ninguém joga a mais nem a menos: todas fazem os mesmos `2×(n-1)` jogos.
+  Ninguém joga a mais nem a menos: todos fazem os mesmos `2×(n-1)` jogos.
 - No returno o mando de quadra inverte: quem foi o lado A na ida é o lado B na
   volta.
 - Desempate: pontos → vitórias → saldo de pontos → pontos marcados →

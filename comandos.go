@@ -24,10 +24,7 @@ func separaNomes(s string) []string {
 		}
 	}
 	if len(out) == 1 {
-		campos := strings.Fields(out[0])
-		if len(campos) == 2 {
-			return campos
-		}
+		return strings.Fields(out[0])
 	}
 	return out
 }
@@ -57,29 +54,29 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 	case "ajuda", "help", "comandos", "menu":
 		return RenderAjuda(), false
 
-	case "dupla", "inscrever", "entrar":
+	case "time", "inscrever", "entrar":
 		nomes := separaNomes(resto)
-		if len(nomes) != 2 {
-			return "Manda assim: `!cup dupla João & Maria`", false
+		if len(nomes) == 0 {
+			return "Manda assim: `!cup time João & Maria & Pedro`", false
 		}
-		d, err := t.AddDupla(nomes[0], nomes[1])
+		e, err := t.AddTime(nomes)
 		if err != nil {
 			return "⚠️ " + err.Error(), false
 		}
-		return fmt.Sprintf("✅ Dupla %d inscrita: *%s*\nTotal: %d duplas.", len(t.Duplas), d.Nome(), len(t.Duplas)), true
+		return fmt.Sprintf("✅ Time %d inscrito: *%s*\nTotal: %d times.", len(t.Times), e.Nome(), len(t.Times)), true
 
-	case "duplas", "lista", "inscritos":
-		return t.RenderDuplas(), false
+	case "times", "lista", "inscritos":
+		return t.RenderTimes(), false
 
 	case "remover", "tirar":
 		if resto == "" {
 			return "Manda `!cup remover João`", false
 		}
-		d, err := t.RemoveDupla(resto)
+		e, err := t.RemoveTime(resto)
 		if err != nil {
 			return "⚠️ " + err.Error(), false
 		}
-		return fmt.Sprintf("🗑️ Removi a dupla *%s*.", d.Nome()), true
+		return fmt.Sprintf("🗑️ Removi o time *%s*.", e.Nome()), true
 
 	case "ate", "até", "alvo":
 		f := strings.ToLower(strings.TrimSpace(resto))
@@ -111,8 +108,8 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		}
 		var b2 strings.Builder
 		b2.WriteString("🎲 *TABELA GERADA!*\n\n")
-		fmt.Fprintf(&b2, "Pontos corridos, turno e returno: %d duplas, %d jogos em %d rodadas.\n", len(t.Duplas), len(t.Jogos), t.Rodadas())
-		fmt.Fprintf(&b2, "Cada dupla enfrenta cada uma das outras *2 vezes*. Vitória vale %d pontos; campeã é quem somar mais no fim.", pontosPorVitoria)
+		fmt.Fprintf(&b2, "Pontos corridos, turno e returno: %d times, %d jogos em %d rodadas.\n", len(t.Times), len(t.Jogos), t.Rodadas())
+		fmt.Fprintf(&b2, "Cada time enfrenta cada um dos outros *2 vezes*. Vitória vale %d pontos; campeão é quem somar mais no fim.", pontosPorVitoria)
 		b2.WriteString(separadorLegenda)
 		b2.WriteString(t.RenderJogos())
 		return b2.String(), true
@@ -150,11 +147,11 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		}
 		var out strings.Builder
 		fmt.Fprintf(&out, "📝 *J%d %s*\n%s %d x %d %s\n🏅 %s leva.",
-			j.ID, titulo, t.NomeDupla(j.A), j.PlacarA, j.PlacarB, t.NomeDupla(j.B), t.NomeDupla(j.Vencedor()))
+			j.ID, titulo, t.NomeTime(j.A), j.PlacarA, j.PlacarB, t.NomeTime(j.B), t.NomeTime(j.Vencedor()))
 		if alvoAntes == 0 && t.Alvo != 0 {
 			fmt.Fprintf(&out, "\n\n🎯 Anotei que os jogos vão até *%d* pontos — vou conferir os próximos por isso. Se não for, manda `!cup ate <n>` ou `!cup ate livre`.", t.Alvo)
 		}
-		out.WriteString("\n\nManda a foto da dupla comemorando que eu grudo nesse jogo. 📸")
+		out.WriteString("\n\nManda a foto do time comemorando que eu grudo nesse jogo. 📸")
 		out.WriteString("\n\n")
 		out.WriteString(t.RenderTabela())
 		if t.Campea == 0 {
@@ -174,10 +171,10 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 
 	case "zerar", "reset":
 		if strings.ToUpper(strings.TrimSpace(resto)) != "CONFIRMA" {
-			return "Isso apaga duplas, tabela e resultados. Se for isso mesmo: `!cup zerar CONFIRMA`", false
+			return "Isso apaga times, tabela e resultados. Se for isso mesmo: `!cup zerar CONFIRMA`", false
 		}
 		*t = *NovoTorneio(t.Chat)
-		return "🧹 Zerei tudo. Comece cadastrando: `!cup dupla João & Maria`", true
+		return "🧹 Zerei tudo. Comece cadastrando: `!cup time João & Maria & Pedro`", true
 	}
 
 	return "", false
