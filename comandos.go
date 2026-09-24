@@ -32,17 +32,26 @@ func separaNomes(s string) []string {
 	return out
 }
 
+const prefixo = "!cup"
+
+// ehComando diz se a mensagem é pra copa: todo comando começa com !cup.
+func ehComando(texto string) bool {
+	campos := strings.Fields(texto)
+	return len(campos) > 0 && strings.ToLower(campos[0]) == prefixo
+}
+
 func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 	texto = strings.TrimSpace(texto)
-	if !strings.HasPrefix(texto, "!") {
+	if !ehComando(texto) {
 		return "", false
 	}
-	campos := strings.Fields(texto[1:])
+	texto = strings.TrimSpace(texto[len(prefixo):])
+	campos := strings.Fields(texto)
 	if len(campos) == 0 {
-		return "", false
+		return RenderAjuda(), false
 	}
 	cmd := strings.ToLower(campos[0])
-	resto := strings.TrimSpace(strings.TrimPrefix(texto[1:], campos[0]))
+	resto := strings.TrimSpace(strings.TrimPrefix(texto, campos[0]))
 
 	switch cmd {
 	case "ajuda", "help", "comandos", "menu":
@@ -51,7 +60,7 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 	case "dupla", "inscrever", "entrar":
 		nomes := separaNomes(resto)
 		if len(nomes) != 2 {
-			return "Manda assim: `!dupla João & Maria`", false
+			return "Manda assim: `!cup dupla João & Maria`", false
 		}
 		d, err := t.AddDupla(nomes[0], nomes[1])
 		if err != nil {
@@ -64,7 +73,7 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 
 	case "remover", "tirar":
 		if resto == "" {
-			return "Manda `!remover João`", false
+			return "Manda `!cup remover João`", false
 		}
 		d, err := t.RemoveDupla(resto)
 		if err != nil {
@@ -76,9 +85,9 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		f := strings.ToLower(strings.TrimSpace(resto))
 		if f == "" {
 			if t.Alvo == 0 {
-				return "Ainda não sei até quantos pontos vão os jogos — eu anoto sozinho no primeiro `!placar`.\nOu define agora: `!ate 17`.", false
+				return "Ainda não sei até quantos pontos vão os jogos — eu anoto sozinho no primeiro `!cup placar`.\nOu define agora: `!cup ate 17`.", false
 			}
-			return fmt.Sprintf("Os jogos vão até *%d* pontos. Pra mudar: `!ate 21`. Pra desligar a conferência: `!ate livre`.", t.Alvo), false
+			return fmt.Sprintf("Os jogos vão até *%d* pontos. Pra mudar: `!cup ate 21`. Pra desligar a conferência: `!cup ate livre`.", t.Alvo), false
 		}
 		if f == "livre" || f == "0" {
 			t.Alvo = 0
@@ -86,7 +95,7 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		}
 		n, err := strconv.Atoi(f)
 		if err != nil {
-			return "Manda `!ate 17` (ou `!ate livre` pra não conferir).", false
+			return "Manda `!cup ate 17` (ou `!cup ate livre` pra não conferir).", false
 		}
 		if err := t.DefinirAlvo(n); err != nil {
 			return "⚠️ " + err.Error(), false
@@ -95,7 +104,7 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 
 	case "sortear", "sorteio", "gerar", "comecar", "começar":
 		if t.Sorteado {
-			return "A tabela já está gerada. Se quiser refazer tudo: `!zerar CONFIRMA`.", false
+			return "A tabela já está gerada. Se quiser refazer tudo: `!cup zerar CONFIRMA`.", false
 		}
 		if err := t.Sortear(); err != nil {
 			return "⚠️ " + err.Error(), false
@@ -119,11 +128,11 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 
 	case "placar", "resultado", "jogo":
 		if !t.Sorteado {
-			return "Gera a tabela primeiro: `!sortear`.", false
+			return "Gera a tabela primeiro: `!cup sortear`.", false
 		}
 		m := rePlacar.FindStringSubmatch(strings.TrimSpace(resto))
 		if m == nil || m[1] == "" {
-			return "Manda o *ID do jogo* junto: `!placar 7 21x18` (jogo J7).\n\n" + t.RenderJogos(), false
+			return "Manda o *ID do jogo* junto: `!cup placar 7 21x18` (jogo J7).\n\n" + t.RenderJogos(), false
 		}
 		id, _ := strconv.Atoi(m[1])
 		a, _ := strconv.Atoi(m[2])
@@ -143,7 +152,7 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		fmt.Fprintf(&out, "📝 *J%d %s*\n%s %d x %d %s\n🏅 %s leva.",
 			j.ID, titulo, t.NomeDupla(j.A), j.PlacarA, j.PlacarB, t.NomeDupla(j.B), t.NomeDupla(j.Vencedor()))
 		if alvoAntes == 0 && t.Alvo != 0 {
-			fmt.Fprintf(&out, "\n\n🎯 Anotei que os jogos vão até *%d* pontos — vou conferir os próximos por isso. Se não for, manda `!ate <n>` ou `!ate livre`.", t.Alvo)
+			fmt.Fprintf(&out, "\n\n🎯 Anotei que os jogos vão até *%d* pontos — vou conferir os próximos por isso. Se não for, manda `!cup ate <n>` ou `!cup ate livre`.", t.Alvo)
 		}
 		out.WriteString("\n\nManda a foto da dupla comemorando que eu grudo nesse jogo. 📸")
 		out.WriteString("\n\n")
@@ -161,14 +170,14 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 			return "⚠️ " + err.Error(), false
 		}
 		t.Atualizar()
-		return fmt.Sprintf("↩️ Desfiz o resultado do J%d. Manda de novo: `!placar %d 21x18`", j.ID, j.ID), true
+		return fmt.Sprintf("↩️ Desfiz o resultado do J%d. Manda de novo: `!cup placar %d 21x18`", j.ID, j.ID), true
 
 	case "zerar", "reset":
 		if strings.ToUpper(strings.TrimSpace(resto)) != "CONFIRMA" {
-			return "Isso apaga duplas, tabela e resultados. Se for isso mesmo: `!zerar CONFIRMA`", false
+			return "Isso apaga duplas, tabela e resultados. Se for isso mesmo: `!cup zerar CONFIRMA`", false
 		}
 		*t = *NovoTorneio(t.Chat)
-		return "🧹 Zerei tudo. Comece cadastrando: `!dupla João & Maria`", true
+		return "🧹 Zerei tudo. Comece cadastrando: `!cup dupla João & Maria`", true
 	}
 
 	return "", false

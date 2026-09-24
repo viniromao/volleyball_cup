@@ -108,7 +108,7 @@ func (t *Torneio) Jogo(id int) *Jogo {
 
 func (t *Torneio) AddDupla(a, b string) (*Dupla, error) {
 	if t.Sorteado {
-		return nil, errors.New("a tabela já foi gerada, use !zerar CONFIRMA pra recomeçar")
+		return nil, errors.New("a tabela já foi gerada, use `!cup zerar CONFIRMA` pra recomeçar")
 	}
 	a = strings.TrimSpace(a)
 	b = strings.TrimSpace(b)
@@ -127,7 +127,7 @@ func (t *Torneio) AddDupla(a, b string) (*Dupla, error) {
 
 func (t *Torneio) RemoveDupla(alvo string) (*Dupla, error) {
 	if t.Sorteado {
-		return nil, errors.New("a tabela já foi gerada, use !zerar CONFIRMA pra recomeçar")
+		return nil, errors.New("a tabela já foi gerada, use `!cup zerar CONFIRMA` pra recomeçar")
 	}
 	alvo = strings.ToLower(strings.TrimSpace(alvo))
 	for i, d := range t.Duplas {
@@ -417,7 +417,7 @@ func (t *Torneio) RegistrarPlacar(jogoID, a, b int) (*Jogo, bool, error) {
 	if t.Alvo == 0 {
 		t.Alvo = venc
 	} else if venc < t.Alvo {
-		return nil, false, fmt.Errorf("os jogos vão até %d, então o vencedor tem que chegar lá (mude com `!ate %d`)", t.Alvo, venc)
+		return nil, false, fmt.Errorf("os jogos vão até %d, então o vencedor tem que chegar lá (mude com `!cup ate %d`)", t.Alvo, venc)
 	} else if venc > t.Alvo && perd < t.Alvo-1 {
 		return nil, false, fmt.Errorf("%dx%d passa de %d sem ser vantagem — confere o placar (jogo até %d só passa disso empatando em %d)", venc, perd, t.Alvo, t.Alvo, t.Alvo-1)
 	}

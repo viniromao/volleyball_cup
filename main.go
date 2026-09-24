@@ -99,7 +99,7 @@ func main() {
 		fatal(err)
 	}
 
-	fmt.Println("🏐 bot da copa no ar. manda !ajuda no grupo. ctrl+c pra sair.")
+	fmt.Println("🏐 bot da copa no ar. manda !cup no grupo. ctrl+c pra sair.")
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
@@ -168,7 +168,7 @@ func (b *Bot) aoReceber(evt *events.Message) {
 	texto := strings.TrimSpace(textoDe(msg))
 	temMidia := msg.GetImageMessage() != nil || msg.GetStickerMessage() != nil
 
-	if !strings.HasPrefix(texto, "!") && !temMidia {
+	if !ehComando(texto) && !temMidia {
 		return
 	}
 
@@ -184,7 +184,7 @@ func (b *Bot) aoReceber(evt *events.Message) {
 	var resposta string
 	var salvar bool
 	sorteadoAntes := t.Sorteado
-	if strings.HasPrefix(texto, "!") {
+	if ehComando(texto) {
 		resposta, salvar = b.Executar(t, texto)
 	}
 	sorteouAgora := !sorteadoAntes && t.Sorteado
@@ -388,7 +388,7 @@ func (b *Bot) bandeira() string {
 }
 
 func (b *Bot) comemorar(chat types.JID, nome, foto string) {
-	legenda := fmt.Sprintf("🏆🏐 *CAMPEÃS DA COPA: %s* 🏐🏆\n\nAcabou! Parabéns, duplas. `!tabela` mostra como terminou.", nome)
+	legenda := fmt.Sprintf("🏆🏐 *CAMPEÃS DA COPA: %s* 🏐🏆\n\nAcabou! Parabéns, duplas. `!cup tabela` mostra como terminou.", nome)
 	if foto == "" {
 		b.responder(chat, legenda)
 		return

@@ -32,33 +32,33 @@ func RenderAjuda() string {
 		"🏐 *COPA DE VÔLEI — PONTOS CORRIDOS*",
 		"",
 		"*Antes de começar*",
-		"`!dupla João & Maria` — cadastra uma dupla",
-		"`!duplas` — lista as duplas inscritas",
-		"`!remover João` — tira a dupla do João",
+		"`!cup dupla João & Maria` — cadastra uma dupla",
+		"`!cup duplas` — lista as duplas inscritas",
+		"`!cup remover João` — tira a dupla do João",
 		"",
-		"`!ate 17` — até quantos pontos vai cada jogo",
+		"`!cup ate 17` — até quantos pontos vai cada jogo",
 		"",
 		"*Gerar a tabela*",
-		"`!sortear` — todos contra todos, ida e volta",
+		"`!cup sortear` — todos contra todos, ida e volta",
 		"",
 		"*Durante a copa*",
-		"`!jogos` — o que falta jogar",
-		"`!placar 7 21x18` — placar do jogo J7 (sempre pelo ID)",
-		"`!placar 7 21x15` — manda de novo pra corrigir o J7",
-		"`!tabela` — a classificação",
-		"`!campeonato` — tabela + todas as rodadas",
-		"`!desfazer` — apaga o último resultado",
+		"`!cup jogos` — o que falta jogar",
+		"`!cup placar 7 21x18` — placar do jogo J7 (sempre pelo ID)",
+		"`!cup placar 7 21x15` — manda de novo pra corrigir o J7",
+		"`!cup tabela` — a classificação",
+		"`!cup campeonato` — tabela + todas as rodadas",
+		"`!cup desfazer` — apaga o último resultado",
 		"",
 		"*Foto*",
-		"manda a foto/sticker da dupla comemorando logo depois do placar (ou com `!placar 7 21x18` na legenda) que eu grudo no jogo.",
+		"manda a foto/sticker da dupla comemorando logo depois do placar (ou com `!cup placar 7 21x18` na legenda) que eu grudo no jogo.",
 		"",
-		"`!zerar CONFIRMA` — recomeça tudo do zero",
+		"`!cup zerar CONFIRMA` — recomeça tudo do zero",
 	}, "\n")
 }
 
 func (t *Torneio) RenderDuplas() string {
 	if len(t.Duplas) == 0 {
-		return "Nenhuma dupla inscrita ainda. Manda `!dupla Fulano & Ciclano`."
+		return "Nenhuma dupla inscrita ainda. Manda `!cup dupla Fulano & Ciclano`."
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "🏐 *DUPLAS INSCRITAS* (%d)\n\n", len(t.Duplas))
@@ -67,14 +67,14 @@ func (t *Torneio) RenderDuplas() string {
 	}
 	if !t.Sorteado {
 		n := len(t.Duplas)
-		fmt.Fprintf(&b, "\nDá %d jogos (cada dupla enfrenta as outras 2 vezes). Manda `!sortear` quando fechar a lista.", n*(n-1))
+		fmt.Fprintf(&b, "\nDá %d jogos (cada dupla enfrenta as outras 2 vezes). Manda `!cup sortear` quando fechar a lista.", n*(n-1))
 	}
 	return b.String()
 }
 
 func (t *Torneio) RenderTabela() string {
 	if !t.Sorteado {
-		return "Ainda não gerei a tabela. Manda `!sortear`."
+		return "Ainda não gerei a tabela. Manda `!cup sortear`."
 	}
 	var b strings.Builder
 	if t.Alvo > 0 {
@@ -130,12 +130,12 @@ func (t *Torneio) porRodada(jogos []*Jogo) ([]int, map[int][]*Jogo) {
 
 func (t *Torneio) RenderJogos() string {
 	if !t.Sorteado {
-		return "Ainda não gerei a tabela. Manda `!sortear`."
+		return "Ainda não gerei a tabela. Manda `!cup sortear`."
 	}
 	pend := t.JogosPendentes()
 	if len(pend) == 0 {
 		if t.Campea != 0 {
-			return fmt.Sprintf("Acabou! 🏆 *%s* é a campeã.\n\nManda `!tabela` pra ver como terminou.", t.NomeDupla(t.Campea))
+			return fmt.Sprintf("Acabou! 🏆 *%s* é a campeã.\n\nManda `!cup tabela` pra ver como terminou.", t.NomeDupla(t.Campea))
 		}
 		return "Todos os jogos já foram registrados."
 	}
@@ -154,7 +154,7 @@ func (t *Torneio) RenderJogos() string {
 		}
 		b.WriteString(t.linhaFolga(r))
 	}
-	b.WriteString("\nPra registrar: `!placar <id> 21x18` — ex: `!placar " + fmt.Sprint(primeiro) + " 21x18`")
+	b.WriteString("\nPra registrar: `!cup placar <id> 21x18` — ex: `!cup placar " + fmt.Sprint(primeiro) + " 21x18`")
 	return b.String()
 }
 

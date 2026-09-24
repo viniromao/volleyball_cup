@@ -33,40 +33,43 @@ sorteio).
 
 ## Comandos
 
+Todo comando começa com `!cup` — o resto das mensagens do grupo (inclusive
+outros bots com `!`) é ignorado. `!cup` sozinho mostra a ajuda.
+
 | Comando | O que faz |
 |---|---|
-| `!ajuda` | lista tudo |
-| `!dupla João & Maria` | cadastra uma dupla |
-| `!duplas` | lista as inscritas |
-| `!remover João` | tira a dupla |
-| `!ate 17` | até quantos pontos vai cada jogo |
-| `!sortear` | gera a tabela, ida e volta |
-| `!jogos` | o que falta jogar, com os IDs |
-| `!placar 7 21x18` | placar do jogo J7 |
-| `!tabela` | a classificação |
-| `!campeonato` | tabela + todas as rodadas |
-| `!desfazer` | apaga o último resultado |
-| `!zerar CONFIRMA` | recomeça do zero |
+| `!cup` / `!cup ajuda` | lista tudo |
+| `!cup dupla João & Maria` | cadastra uma dupla |
+| `!cup duplas` | lista as inscritas |
+| `!cup remover João` | tira a dupla |
+| `!cup ate 17` | até quantos pontos vai cada jogo |
+| `!cup sortear` | gera a tabela, ida e volta |
+| `!cup jogos` | o que falta jogar, com os IDs |
+| `!cup placar 7 21x18` | placar do jogo J7 |
+| `!cup tabela` | a classificação |
+| `!cup campeonato` | tabela + todas as rodadas |
+| `!cup desfazer` | apaga o último resultado |
+| `!cup zerar CONFIRMA` | recomeça do zero |
 
 ### Placar é sempre pelo ID do jogo
 
-Cada jogo tem um ID fixo (`J7`), que aparece em `!jogos` e `!campeonato`. O
+Cada jogo tem um ID fixo (`J7`), que aparece em `!cup jogos` e `!cup campeonato`. O
 placar vai sempre com esse ID — a ordem em que os jogos acontecem não importa,
 então dá pra registrar fora de ordem, com duas quadras rodando ao mesmo tempo:
 
 ```
-!placar 7 21x18
-!placar 12 21x15
-!placar 9 17x21
+!cup placar 7 21x18
+!cup placar 12 21x15
+!cup placar 9 17x21
 ```
 
 Mandar de novo no mesmo ID **corrige** o resultado anterior (ele responde
-`J7 corrigido` e refaz a tabela). `!desfazer` apaga o último placar registrado.
+`J7 corrigido` e refaz a tabela). `!cup desfazer` apaga o último placar registrado.
 
 ### Fotos
 
 Manda a foto (ou sticker) da dupla comemorando **logo depois do placar** — ou
-com `!placar 7 21x18` na legenda da imagem — que ela fica grudada naquele jogo
+com `!cup placar 7 21x18` na legenda da imagem — que ela fica grudada naquele jogo
 (aparece um 📸 na lista de rodadas). No fim, a foto da campeã volta com a
 mensagem do título. A janela pra anexar é de 20 minutos após o placar.
 
@@ -81,14 +84,14 @@ quem somar mais pontos no fim. Não tem grupo nem mata-mata, ninguém é elimina
   placar que você registrar (`17x6` → alvo 17) e confere os seguintes: recusa
   um placar cujo vencedor não chegou lá, e recusa um que passou do alvo sem ser
   vantagem (`20x5` com alvo 17). Vantagem passa normal: `19x17`, `18x16`.
-  `!ate 21` muda o alvo, `!ate livre` desliga a conferência.
+  `!cup ate 21` muda o alvo, `!cup ate livre` desliga a conferência.
 - Cada vitória vale **3 pontos** na tabela, independente da margem. A margem
   entra no saldo, que é o primeiro critério de desempate.
 - A tabela é gerada pelo método do círculo, então dentro de cada rodada nenhuma
   dupla joga duas vezes seguidas — todo mundo descansa parecido.
 - **Número ímpar de duplas**: uma dupla folga por rodada, e ao longo do turno
   cada uma folga exatamente uma vez (duas no total, com o returno). A folga
-  aparece em `!jogos` e `!campeonato` como `😴 folga: Fulano & Ciclano`.
+  aparece em `!cup jogos` e `!cup campeonato` como `😴 folga: Fulano & Ciclano`.
   Ninguém joga a mais nem a menos: todas fazem os mesmos `2×(n-1)` jogos.
 - No returno o mando de quadra inverte: quem foi o lado A na ida é o lado B na
   volta.
