@@ -143,12 +143,18 @@ func (t *Torneio) RenderJogos() string {
 	b.WriteString("⏭️ *JOGOS PENDENTES*\n")
 	ordem, m := t.porRodada(pend)
 	primeiro := pend[0].ID
+	segundo := 0
+	if len(pend) > 1 {
+		segundo = pend[1].ID
+	}
 	for _, r := range ordem {
 		fmt.Fprintf(&b, "\n_Rodada %d_\n", r)
 		for _, j := range m[r] {
 			prefixo := "  "
 			if j.ID == primeiro {
 				prefixo = "▶ "
+			} else if j.ID == segundo {
+				prefixo = "⏩ "
 			}
 			fmt.Fprintf(&b, "%s%s\n", prefixo, t.LinhaJogo(j))
 		}

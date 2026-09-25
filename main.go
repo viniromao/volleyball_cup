@@ -24,7 +24,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const janelaFoto = 20 * time.Minute
+const (
+	janelaFoto = 20 * time.Minute
+	// o WhatsApp só deixa editar mensagem até 15 minutos depois de enviada.
+	janelaEdicao = 14 * time.Minute
+)
 
 type Bot struct {
 	cli      *whatsmeow.Client
@@ -184,10 +188,12 @@ func (b *Bot) aoReceber(evt *events.Message) {
 	var resposta string
 	var salvar bool
 	sorteadoAntes := t.Sorteado
+	placarAntes := t.UltimoEm
 	if ehComando(texto) {
 		resposta, salvar = b.Executar(t, texto)
 	}
 	sorteouAgora := !sorteadoAntes && t.Sorteado
+	placarAgora := !t.UltimoEm.Equal(placarAntes)
 	alvoFoto := t.UltimoJogo
 	dentroDaJanela := time.Since(t.UltimoEm) < janelaFoto
 	b.mu.Unlock()
@@ -203,7 +209,9 @@ func (b *Bot) aoReceber(evt *events.Message) {
 				legenda = ""
 			}
 		}
-		if texto := juntar(legenda, detalhes); texto != "" {
+		if texto := juntar(legenda, detalhes); placarAgora {
+			b.publicarPlacar(evt, t, texto)
+		} else if texto != "" {
 			b.responder(evt.Info.Chat, texto)
 		}
 	}
@@ -301,6 +309,52 @@ func (b *Bot) responder(chat types.JID, texto string) {
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "erro ao enviar:", err)
+	}
+}
+
+// publicarPlacar manda o placar novo e edita o anterior pra só apontar pra ele,
+// assim o grupo não fica com várias tabelas desatualizadas.
+func (b *Bot) publicarPlacar(evt *events.Message, t *Torneio, texto string) {
+	ctx := context.Background()
+	chat := evt.Info.Chat
+	resp, err := b.cli.SendMessage(ctx, chat, &waE2E.Message{
+		ExtendedTextMessage: &waE2E.ExtendedTextMessage{Text: proto.String(texto)},
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "erro ao enviar:", err)
+		return
+	}
+
+	b.mu.Lock()
+	antiga := ""
+	if time.Since(t.PlacarMsgEm) < janelaEdicao {
+		antiga = t.PlacarMsg
+	}
+	t.PlacarMsg = resp.ID
+	t.PlacarMsgEm = time.Now()
+	jogo := t.UltimoJogo
+	b.mu.Unlock()
+
+	if antiga == "" {
+		return
+	}
+	eu := b.cli.Store.GetJID().ToNonAD()
+	if evt.Info.AddressingMode == types.AddressingModeLID {
+		eu = b.cli.Store.GetLID().ToNonAD()
+	}
+	aponta := &waE2E.ExtendedTextMessage{
+		Text: proto.String(fmt.Sprintf("⬇️ Placar atualizado mais abaixo — saiu o J%d.", jogo)),
+	}
+	if !eu.IsEmpty() {
+		aponta.ContextInfo = &waE2E.ContextInfo{
+			StanzaID:      proto.String(resp.ID),
+			Participant:   proto.String(eu.String()),
+			QuotedMessage: &waE2E.Message{Conversation: proto.String(texto)},
+		}
+	}
+	edit := b.cli.BuildEdit(chat, antiga, &waE2E.Message{ExtendedTextMessage: aponta})
+	if _, err := b.cli.SendMessage(ctx, chat, edit); err != nil {
+		fmt.Fprintln(os.Stderr, "erro ao editar:", err)
 	}
 }
 

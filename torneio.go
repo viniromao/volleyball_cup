@@ -70,6 +70,7 @@ func (j *Jogo) Envolve(id int) bool {
 type Torneio struct {
 	Chat           string         `json:"chat"`
 	Alvo           int            `json:"alvo"`
+	Livre          bool           `json:"livre"`
 	Turnos         int            `json:"turnos"`
 	Times          []*Equipe      `json:"times"`
 	Duplas         []*duplaAntiga `json:"duplas,omitempty"`
@@ -81,6 +82,8 @@ type Torneio struct {
 	UltimoJogo     int            `json:"ultimo_jogo"`
 	UltimoEm       time.Time      `json:"ultimo_em"`
 	AnunciouCampea bool           `json:"anunciou_campea"`
+	PlacarMsg      string         `json:"placar_msg"`
+	PlacarMsgEm    time.Time      `json:"placar_msg_em"`
 }
 
 func NovoTorneio(chat string) *Torneio {
@@ -231,7 +234,7 @@ func (t *Torneio) Sortear() error {
 					a, b = b, a
 				}
 				t.Jogos = append(t.Jogos, &Jogo{
-					ID:     t.novoID(),
+					ID:     len(t.Jogos) + 1,
 					Rodada: rodada,
 					Turno:  turno,
 					A:      a,
@@ -288,10 +291,16 @@ func (t *Torneio) JogosPendentes() []*Jogo {
 }
 
 func (t *Torneio) ProximoJogo() *Jogo {
-	for _, j := range t.Jogos {
-		if !j.Jogado {
-			return j
-		}
+	if p := t.JogosPendentes(); len(p) > 0 {
+		return p[0]
+	}
+	return nil
+}
+
+// DepoisDoProximo é o jogo que vem logo depois do próximo.
+func (t *Torneio) DepoisDoProximo() *Jogo {
+	if p := t.JogosPendentes(); len(p) > 1 {
+		return p[1]
 	}
 	return nil
 }
@@ -448,7 +457,7 @@ func (t *Torneio) RegistrarPlacar(jogoID, a, b int) (*Jogo, bool, error) {
 		venc, perd = b, a
 	}
 	if t.Alvo == 0 {
-		t.Alvo = venc
+		// sem alvo ainda: confere nada, e só anota depois se o placar deixar claro.
 	} else if venc < t.Alvo {
 		return nil, false, fmt.Errorf("os jogos vão até %d, então o vencedor tem que chegar lá (mude com `!cup ate %d`)", t.Alvo, venc)
 	} else if venc > t.Alvo && perd < t.Alvo-1 {
@@ -465,7 +474,17 @@ func (t *Torneio) RegistrarPlacar(jogoID, a, b int) (*Jogo, bool, error) {
 	t.UltimoJogo = j.ID
 	t.UltimoEm = time.Now()
 	t.AnunciouCampea = false
+	// 7x5 diz que o jogo ia até 7; 8x7 pode ser jogo até 7 que foi pra
+	// vantagem, então aí melhor perguntar do que adivinhar.
+	if t.SemAlvo() && venc-perd >= 2 {
+		_ = t.DefinirAlvo(venc)
+	}
 	return j, corrigido, nil
+}
+
+// SemAlvo diz se ainda falta saber até quantos pontos vão os jogos.
+func (t *Torneio) SemAlvo() bool {
+	return t.Alvo == 0 && !t.Livre
 }
 
 func (t *Torneio) Desfazer() (*Jogo, error) {
@@ -502,6 +521,7 @@ func (t *Torneio) DefinirAlvo(n int) error {
 		}
 	}
 	t.Alvo = n
+	t.Livre = false
 	return nil
 }
 

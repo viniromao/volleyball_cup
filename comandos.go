@@ -81,13 +81,17 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 	case "ate", "até", "alvo":
 		f := strings.ToLower(strings.TrimSpace(resto))
 		if f == "" {
+			if t.Livre {
+				return "A conferência está desligada, aceito qualquer placar. Pra ligar: `!cup ate 17`.", false
+			}
 			if t.Alvo == 0 {
-				return "Ainda não sei até quantos pontos vão os jogos — eu anoto sozinho no primeiro `!cup placar`.\nOu define agora: `!cup ate 17`.", false
+				return "Ainda não sei até quantos pontos vão os jogos — eu anoto sozinho no primeiro `!cup placar` que não for apertado.\nOu define agora: `!cup ate 17`.", false
 			}
 			return fmt.Sprintf("Os jogos vão até *%d* pontos. Pra mudar: `!cup ate 21`. Pra desligar a conferência: `!cup ate livre`.", t.Alvo), false
 		}
 		if f == "livre" || f == "0" {
 			t.Alvo = 0
+			t.Livre = true
 			return "🔓 Conferência desligada. Agora eu aceito qualquer placar.", true
 		}
 		n, err := strconv.Atoi(f)
@@ -150,6 +154,8 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 			j.ID, titulo, t.NomeTime(j.A), j.PlacarA, j.PlacarB, t.NomeTime(j.B), t.NomeTime(j.Vencedor()))
 		if alvoAntes == 0 && t.Alvo != 0 {
 			fmt.Fprintf(&out, "\n\n🎯 Anotei que os jogos vão até *%d* pontos — vou conferir os próximos por isso. Se não for, manda `!cup ate <n>` ou `!cup ate livre`.", t.Alvo)
+		} else if t.SemAlvo() {
+			fmt.Fprintf(&out, "\n\n🤔 Jogo apertado, não dá pra saber até quantos pontos vão os jogos. Até quanto é? Manda `!cup ate %d`, por exemplo.", min(j.PlacarA, j.PlacarB))
 		}
 		out.WriteString("\n\nManda a foto do time comemorando que eu grudo nesse jogo. 📸")
 		out.WriteString("\n\n")
@@ -157,6 +163,9 @@ func (b *Bot) Executar(t *Torneio, texto string) (string, bool) {
 		if t.Campea == 0 {
 			if p := t.ProximoJogo(); p != nil {
 				fmt.Fprintf(&out, "\n\n▶ Próximo: %s", t.LinhaJogo(p))
+			}
+			if d := t.DepoisDoProximo(); d != nil {
+				fmt.Fprintf(&out, "\n⏩ Depois: %s", t.LinhaJogo(d))
 			}
 		}
 		return out.String(), true
