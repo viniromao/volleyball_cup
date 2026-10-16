@@ -474,9 +474,9 @@ func (t *Torneio) RegistrarPlacar(jogoID, a, b int) (*Jogo, bool, error) {
 	t.UltimoJogo = j.ID
 	t.UltimoEm = time.Now()
 	t.AnunciouCampea = false
-	// 7x5 diz que o jogo ia até 7; 8x7 pode ser jogo até 7 que foi pra
-	// vantagem, então aí melhor perguntar do que adivinhar.
-	if t.SemAlvo() && venc-perd >= 2 {
+	// 7x4 diz que o jogo ia até 7; com 2 de diferença ou menos (8x7, 19x17)
+	// pode ser vantagem de um jogo até 7, então melhor perguntar do que adivinhar.
+	if t.SemAlvo() && venc-perd >= 3 {
 		_ = t.DefinirAlvo(venc)
 	}
 	return j, corrigido, nil

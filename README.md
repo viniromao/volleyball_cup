@@ -92,7 +92,7 @@ quem somar mais pontos no fim. Não tem grupo nem mata-mata, ninguém é elimina
 - O placar é a **quantidade de pontos do jogo** (`21x18`), não sets. Quem fizer
   mais pontos vence.
 - Todos os jogos vão até o mesmo alvo. O bot anota o alvo sozinho no primeiro
-  placar com folga de 2 ou mais (`17x6` → alvo 17). Placar apertado (`8x7`)
+  placar com folga de 3 ou mais (`17x6` → alvo 17). Placar apertado, 2 de diferença ou menos (`8x7`, `19x17`)
   não diz o alvo — pode ser jogo até 7 que foi pra vantagem — então o bot
   pergunta e espera um `!cup ate 7`. Com o alvo, confere os seguintes: recusa
   um placar cujo vencedor não chegou lá, e recusa um que passou do alvo sem ser
